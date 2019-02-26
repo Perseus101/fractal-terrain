@@ -43,7 +43,9 @@ var config = {
         use: ['awesome-typescript-loader', 'source-map-loader']
       },
       { test: /\.html$/, loader: 'html-loader' },
-      { test: /\.css$/, loaders: ['style-loader', 'css-loader'] }
+      { test: /\.css$/, loaders: ['style-loader', 'css-loader'] },
+      { test: /\.fs$/, use: ['raw-loader'] },
+      { test: /\.vs$/, use: ['raw-loader'] },
     ]
   },
   resolve: {
