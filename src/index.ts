@@ -26,7 +26,42 @@ function main() {
         vec3.fromValues(0.5, 0.5, 0.5), // Center
         vec3.fromValues(0, 1, 0) // Up
     );
-    document.addEventListener('keydown', (ev: KeyboardEvent) => camera.keyboardInput(ev));
+
+    // Add event listeners
+    document.addEventListener('keydown', (ev: KeyboardEvent) => camera.keyDown(ev), false);
+    document.addEventListener('keyup', (ev: KeyboardEvent) => camera.keyUp(ev), false);
+
+    canvas.addEventListener('mousedown', (ev: MouseEvent) => {
+        let el = ev.target as any;
+        el.requestPointerLock = el.requestPointerLock ||
+                                el.mozRequestPointerLock ||
+                                el.webkitRequestPointerLock;
+
+        el.requestPointerLock();
+    }, false);
+
+    let mouseCallback = (ev: MouseEvent) => {
+        camera.mouseInput(ev);
+    }
+
+    let changeCallback = () => {
+        let el = document as any;
+        if (el.pointerLockElement === canvas ||
+            el.mozPointerLockElement === canvas ||
+            el.webkitPointerLockElement === canvas) {
+            // Pointer locked
+            document.addEventListener('mousemove', mouseCallback, false);
+        }
+        else {
+            // Pointer unlocked
+            document.removeEventListener("mousemove", mouseCallback, false);
+        }
+    }
+
+    document.addEventListener('pointerlockchange', changeCallback, false);
+    document.addEventListener('mozpointerlockchange', changeCallback, false);
+    document.addEventListener('webkitpointerlockchange', changeCallback, false);
+
     render(gl, shader, environment, camera);
 }
 
