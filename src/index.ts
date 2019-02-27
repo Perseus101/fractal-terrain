@@ -28,6 +28,12 @@ function main() {
     );
 
     // Add event listeners
+    setupCallbacks(camera, canvas);
+
+    render(gl, shader, environment, camera);
+}
+
+function setupCallbacks(camera: Camera, canvas: HTMLElement) {
     document.addEventListener('keydown', (ev: KeyboardEvent) => camera.keyDown(ev), false);
     document.addEventListener('keyup', (ev: KeyboardEvent) => camera.keyUp(ev), false);
 
@@ -61,8 +67,6 @@ function main() {
     document.addEventListener('pointerlockchange', changeCallback, false);
     document.addEventListener('mozpointerlockchange', changeCallback, false);
     document.addEventListener('webkitpointerlockchange', changeCallback, false);
-
-    render(gl, shader, environment, camera);
 }
 
 function onReady(fn: Function) {
