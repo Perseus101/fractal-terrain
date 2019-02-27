@@ -71,6 +71,7 @@ export class Camera {
 
         // Correct up according the new center
         lookAt = vec3.normalize(lookAt, vec3.subtract(temp, this.center, this.eye)); // get lookat vector
+        vec3.add(this.center, this.eye, lookAt); //reset center to be unit distance away
         vec3.cross(this.up, lookAt, viewRight);
         // this.rotateY(-movementX * this.rotDelta);
         // this.rotateX(movementY * this.rotDelta);
