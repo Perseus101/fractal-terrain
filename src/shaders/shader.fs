@@ -42,7 +42,7 @@ void main(void) {
     vec3 specular = uSpecular*uLightSpecular*highlight; // specular term
 
     // combine to find lit color
-    vec3 litColor = ambient + diffuse + specular;
+    vec3 litColor = ambient + diffuse;
 
     gl_FragColor = vec4(litColor, 1.0);
 } // end main

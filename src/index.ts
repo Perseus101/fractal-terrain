@@ -3,6 +3,7 @@ import { vec3 } from 'gl-matrix';
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
 import { Environment } from './environment/environment';
+import { FractalA } from './environment/fractal_a';
 import { Camera } from './camera';
 
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
@@ -20,7 +21,7 @@ function main() {
     document.querySelector("body").appendChild(canvas);
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
-    let environment = new Environment(gl);
+    let environment = new FractalA(gl);
     let camera = new Camera(
         vec3.fromValues(0.5, 0.5, -0.5), // Eye
         vec3.fromValues(0.5, 0.5, 0.5), // Center

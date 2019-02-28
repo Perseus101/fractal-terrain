@@ -13,12 +13,12 @@ void main(void) {
 
     // vertex position
     vec4 vWorldPos4 = umMatrix * vec4(aVertexPosition, 1.0);
-    vWorldPos = vec3(vWorldPos4.x,vWorldPos4.y,vWorldPos4.z);
+    vWorldPos = vWorldPos4.xyz;
     gl_Position = upvmMatrix * vec4(aVertexPosition, 1.0);
 
     // vertex normal (assume no non-uniform scale)
     vec4 vWorldNormal4 = umMatrix * vec4(aVertexNormal, 0.0);
-    vVertexNormal = normalize(vec3(vWorldNormal4.x,vWorldNormal4.y,vWorldNormal4.z));
+    vVertexNormal = normalize(vWorldNormal4.xyz);
 
     // vertex uv
     //vVertexUV = aVertexUV;

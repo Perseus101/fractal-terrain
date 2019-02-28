@@ -46,7 +46,7 @@ export class Camera {
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
-        // TODO Eye
+        gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
     }
 
     mouseInput(ev: MouseEvent) {
