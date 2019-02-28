@@ -30,7 +30,7 @@ function seededRandom(vec: vec3) {
 }
 
 function expRand(vec: vec3, n : number) {
-    return 0.5 * seededRandom(vec) / Math.pow(2, n + 1);
+    return 0.5 * seededRandom(vec) / Math.pow(2, n);
     // if (n < 4) {
     //     return 0.5 * seededRandom(vec) / Math.pow(n+1, 1.5);
     // } else {
@@ -79,6 +79,17 @@ function getCoord(index: number) {
     return [reverse(x, digits), reverse(y, digits)];
 }
 
+function getNormal(a : vec3, b : vec3, c : vec3) {
+    let tmp1 = vec3.create();
+    let tmp2 = vec3.create();
+    vec3.subtract(tmp1, b, a);
+    vec3.subtract(tmp2, c, a);
+    let normal = vec3.create();
+    vec3.cross(normal, tmp1, tmp2);
+    vec3.normalize(normal, normal);
+    return normal;
+}
+
 export class FractalA extends Environment {
     finalDepth : number;
     quadNormals : vec3[];
@@ -99,7 +110,7 @@ export class FractalA extends Environment {
 
         this.fractalRecurse(initBl, initBr, initTl, initTr, 0);
 
-        for (let i = 0; i < this.quadNormals.length; i++) {
+        for (let i = 0; i < this.quadNormals.length / 3; i++) {
             let result = getCoord(i);
             let x = result[0];
             let y = result[1];
@@ -122,15 +133,22 @@ export class FractalA extends Environment {
             this.vertices.push(br[0], br[1], br[2]);
             this.vertices.push(tl[0], tl[1], tl[2]);
             this.vertices.push(tr[0], tr[1], tr[2]);
-            let a = vec3.create();
-            let b = vec3.create();
-            vec3.subtract(a, bl, tl);
-            vec3.subtract(b, tr, tl);
-            let normal = vec3.create();
-            vec3.cross(normal, b, a);
-            this.quadNormals.push(normal);
+
+            let normA = getNormal(bl, tl, br);
+            let normB = getNormal(tl, tr, br);
+            let sum = vec3.create();
+            vec3.add(sum, normA, normB);
+            this.quadNormals.push(normA, normB, sum);
+
+            // let normal = vec3.create();
+            // vec3.normalize(normal, sum);
+            // this.normals.push(normA[0], normA[1], normA[2]);
+            // this.normals.push(normal[0], normal[1], normal[2]);
+            // this.normals.push(normB[0], normB[1], normB[2]);
+            // this.normals.push(normal[0], normal[1], normal[2]);
+
             let len = this.vertices.length / 3;
-            this.triangles.push(len - 4, len - 2, len - 1, len - 4, len - 1, len - 3);
+            this.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);
         } else {
             let midLeft = vec3.create();
             let midTop = vec3.create();
@@ -167,10 +185,10 @@ export class FractalA extends Environment {
 
     addNormals(x: number, y: number) {
         //averages the normals of   x,y   x+1,y   x+1,y+1   x,y+1, and throws it into the normals array
-        let a = getIndex(x - 1, y - 1);
-        let b = getIndex(x, y - 1);
-        let c = getIndex(x - 1, y);
-        let d = getIndex(x, y);
+        let a = getIndex(x - 1, y - 1) * 3 + 1;
+        let b = getIndex(x, y - 1) * 3 + 2;
+        let c = getIndex(x - 1, y) * 3 + 2;
+        let d = getIndex(x, y) * 3 + 0;
 
         let normal = vec3.create();
 
