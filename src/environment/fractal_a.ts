@@ -16,8 +16,6 @@ function hashFloat(n: number) {
 
 function hashCombine(lhs: number, rhs: number) {
     return lhs * 19 + rhs;
-    // lhs ^= rhs + 0x9e3779b9 + (lhs << 6) + (lhs >>> 2);
-    // return lhs;
 }
 
 var globalSeed = hashFloat(Math.random());
@@ -25,17 +23,17 @@ var globalSeed = hashFloat(Math.random());
 function seededRandom(vec: vec3) {
     let seed = hashCombine(hashCombine(hashCombine(globalSeed, vec[0]), vec[1]), vec[2]);
     let x = Math.sin(seed) * 10000;
-    let rand = x - Math.floor(x);
-    return 2 * (rand - 0.5);
+    return x - Math.floor(x);
+}
+
+function seededRandomGauss(vec: vec3) {
+    let randA = seededRandom(vec);
+    let randB = seededRandom(vec3.fromValues(vec[0] + randA, vec[1] + randA, vec[2] + randA));
+    return Math.sqrt(-2 * Math.log(randA)) * Math.cos(2 * Math.PI * randB);
 }
 
 function expRand(vec: vec3, n : number) {
-    return 0.5 * seededRandom(vec) / Math.pow(2, n);
-    // if (n < 4) {
-    //     return 0.5 * seededRandom(vec) / Math.pow(n+1, 1.5);
-    // } else {
-    //     return 0.5 * seededRandom(vec) / Math.pow(2, n + 1);
-    // }
+    return 0.5*seededRandomGauss(vec) / Math.pow(2, n + 1);
 }
 
 function reverse(binary: number, length: number) {
@@ -102,10 +100,10 @@ export class FractalA extends Environment {
         let initTl = vec3.fromValues(-1, 0, 1);
         let initTr = vec3.fromValues(1, 0, 1);
         let initBr = vec3.fromValues(1, 0, -1);
-        initBl[1] += seededRandom(initBl);
-        initTl[1] += seededRandom(initTl);
-        initTr[1] += seededRandom(initTr);
-        initBr[1] += seededRandom(initBr);
+        initBl[1] += expRand(initBl, 0);
+        initTl[1] += expRand(initTl, 0);
+        initTr[1] += expRand(initTr, 0);
+        initBr[1] += expRand(initBr, 0);
         this.quadNormals = [];
 
         this.fractalRecurse(initBl, initBr, initTl, initTr, 0);

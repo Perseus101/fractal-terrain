@@ -24,7 +24,7 @@ export abstract class Environment {
 
         this.indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer); // activate that buffer
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array((this.triangles as any).flat()), gl.DYNAMIC_DRAW); // data in
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array((this.triangles as any).flat()), gl.STATIC_DRAW); // data in
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {

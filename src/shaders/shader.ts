@@ -77,7 +77,7 @@ export class Shader {
         var lightPosition = vec3.fromValues(0, 50, 0); // default light position
 
         var ambient = vec3.fromValues(0, 0, 0); // default ambient emission
-        var diffuse = vec3.fromValues(0.15, 0.7, 0.15); // default diffuse emission
+        var diffuse = vec3.fromValues(0.6, 0.6, 0.6); // default diffuse emission
         var specular = vec3.fromValues(0.1, 0.1, 0.1); // default specular emission
         var shininess = 11; // specular exponent
 
