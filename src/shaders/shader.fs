@@ -4,10 +4,15 @@ precision mediump float; // set float to medium precision
 uniform vec3 uEyePosition; // the eye's position in world
 
 // light properties
-uniform vec3 uLightAmbient; // the light's ambient color
-uniform vec3 uLightDiffuse; // the light's diffuse color
-uniform vec3 uLightSpecular; // the light's specular color
-uniform vec3 uLightPosition; // the light's position
+uniform vec3 uSunAmbient; // the light's ambient color
+uniform vec3 uSunDiffuse; // the light's diffuse color
+uniform vec3 uSunSpecular; // the light's specular color
+
+uniform vec3 uMoonAmbient; // the light's ambient color
+uniform vec3 uMoonDiffuse; // the light's diffuse color
+uniform vec3 uMoonSpecular; // the light's specular color
+
+uniform vec3 uSunDirection; // the direction of the sun
 
 // material properties
 uniform vec3 uAmbient; // the ambient reflectivity
@@ -27,22 +32,26 @@ varying vec3 vVertexNormal; // normal of fragment
 void main(void) {
 
     // ambient term
-    vec3 ambient = uAmbient*uLightAmbient;
+    vec3 ambient = uAmbient*uSunAmbient + uAmbient*uMoonAmbient;
 
     // diffuse term
     vec3 normal = normalize(vVertexNormal);
-    vec3 light = normalize(uLightPosition - vWorldPos);
-    float lambert = max(0.0,dot(normal,light));
-    vec3 diffuse = uDiffuse*uLightDiffuse*lambert; // diffuse term
+    vec3 sunLight = uSunDirection;
+    float sunLambert = max(0.0,dot(normal,sunLight));
+    vec3 sunDiffuse = uDiffuse*uSunDiffuse*sunLambert; // diffuse term
+
+    vec3 moonLight = uSunDirection * -1.0;
+    float moonLambert = max(0.0,dot(normal,moonLight));
+    vec3 moonDiffuse = uDiffuse*uMoonDiffuse*moonLambert; // diffuse term
 
     // specular term
     vec3 eye = normalize(uEyePosition - vWorldPos);
-    vec3 halfVec = normalize(light+eye);
+    vec3 halfVec = normalize(sunLight+eye);
     float highlight = pow(max(0.0,dot(normal,halfVec)),uShininess);
-    vec3 specular = uSpecular*uLightSpecular*highlight; // specular term
+    vec3 specular = uSpecular*uSunSpecular*highlight; // specular term
 
     // combine to find lit color
-    vec3 litColor = ambient + diffuse;
+    vec3 litColor = ambient + sunDiffuse + moonDiffuse;
 
     gl_FragColor = vec4(litColor, 1.0);
 } // end main

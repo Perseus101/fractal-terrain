@@ -11,6 +11,7 @@ export class Shader {
 
     public pvmMatrixULoc: WebGLUniformLocation;
     public eyePositionULoc: WebGLUniformLocation;
+    public sunDirectionULoc: WebGLUniformLocation;
 
     constructor(gl: WebGLRenderingContext,
             fShaderCode: string,
@@ -56,25 +57,28 @@ export class Shader {
 
         // locate fragment uniforms
         this.eyePositionULoc = gl.getUniformLocation(this.shaderProgram, "uEyePosition"); // ptr to eye position
-        let lightAmbientULoc = gl.getUniformLocation(this.shaderProgram, "uLightAmbient"); // ptr to light ambient
-        let lightDiffuseULoc = gl.getUniformLocation(this.shaderProgram, "uLightDiffuse"); // ptr to light diffuse
-        let lightSpecularULoc = gl.getUniformLocation(this.shaderProgram, "uLightSpecular"); // ptr to light specular
-        let lightPositionULoc = gl.getUniformLocation(this.shaderProgram, "uLightPosition"); // ptr to light position
+        let sunAmbientULoc = gl.getUniformLocation(this.shaderProgram, "uSunAmbient"); // ptr to light ambient
+        let sunDiffuseULoc = gl.getUniformLocation(this.shaderProgram, "uSunDiffuse"); // ptr to light diffuse
+        let sunSpecularULoc = gl.getUniformLocation(this.shaderProgram, "uSunSpecular"); // ptr to light specular
+        let moonAmbientULoc = gl.getUniformLocation(this.shaderProgram, "uMoonAmbient"); // ptr to light ambient
+        let moonDiffuseULoc = gl.getUniformLocation(this.shaderProgram, "uMoonDiffuse"); // ptr to light diffuse
+        let moonSpecularULoc = gl.getUniformLocation(this.shaderProgram, "uMoonSpecular"); // ptr to light specular
+        this.sunDirectionULoc = gl.getUniformLocation(this.shaderProgram, "uSunDirection"); // ptr to sun direction
         let ambientULoc = gl.getUniformLocation(this.shaderProgram, "uAmbient"); // ptr to ambient
         let diffuseULoc = gl.getUniformLocation(this.shaderProgram, "uDiffuse"); // ptr to diffuse
         let specularULoc = gl.getUniformLocation(this.shaderProgram, "uSpecular"); // ptr to specular
         let shininessULoc = gl.getUniformLocation(this.shaderProgram, "uShininess"); // ptr to shininess
 
         // Pass in default values for uniforms
+        // var sunDirection = vec3.fromValues(0,1,0);
 
-        var eye = vec3.fromValues(0.5, 0.5, -0.5); // default eye position in world space
-        var center = vec3.fromValues(0.5, 0.5, 0.5); // default look at position in world space
-        var up = vec3.fromValues(0, 1, 0); // default up
+        var sunAmbient = vec3.fromValues(1, 1, 1); // default light ambient emission
+        var sunDiffuse = vec3.fromValues(1, 1, 1); // default light diffuse emission
+        var sunSpecular = vec3.fromValues(1, 1, 1); // default light specular emission
 
-        var lightAmbient = vec3.fromValues(1, 1, 1); // default light ambient emission
-        var lightDiffuse = vec3.fromValues(1, 1, 1); // default light diffuse emission
-        var lightSpecular = vec3.fromValues(1, 1, 1); // default light specular emission
-        var lightPosition = vec3.fromValues(0, 50, 0); // default light position
+        var moonAmbient = vec3.fromValues(1, 1, 1); // default light ambient emission
+        var moonDiffuse = vec3.fromValues(0.25, 0.53, 1); // default light diffuse emission
+        var moonSpecular = vec3.fromValues(1, 1, 1); // default light specular emission
 
         var ambient = vec3.fromValues(0, 0, 0); // default ambient emission
         var diffuse = vec3.fromValues(0.15, 0.7, 0.15); // default diffuse emission
@@ -98,11 +102,13 @@ export class Shader {
         gl.uniformMatrix4fv(mMatrixULoc, false, mMatrix); // pass in the m matrix
         // gl.uniformMatrix4fv(this.pvmMatrixULoc, false, hpvmMatrix); // pass in the hpvm matrix
 
-        gl.uniform3fv(this.eyePositionULoc, eye); // pass in the eye's position
-        gl.uniform3fv(lightAmbientULoc, lightAmbient); // pass in the light's ambient emission
-        gl.uniform3fv(lightDiffuseULoc, lightDiffuse); // pass in the light's diffuse emission
-        gl.uniform3fv(lightSpecularULoc, lightSpecular); // pass in the light's specular emission
-        gl.uniform3fv(lightPositionULoc, lightPosition); // pass in the light's position
+        gl.uniform3fv(sunAmbientULoc, sunAmbient); // pass in the sun's ambient emission
+        gl.uniform3fv(sunDiffuseULoc, sunDiffuse); // pass in the sun's diffuse emission
+        gl.uniform3fv(sunSpecularULoc, sunSpecular); // pass in the sun's specular emission
+
+        gl.uniform3fv(moonAmbientULoc, moonAmbient); // pass in the moon's ambient emission
+        gl.uniform3fv(moonDiffuseULoc, moonDiffuse); // pass in the moon's diffuse emission
+        gl.uniform3fv(moonSpecularULoc, moonSpecular); // pass in the moon's specular emission
 
         gl.uniform3fv(ambientULoc, ambient); // pass in the ambient reflectivity
         gl.uniform3fv(diffuseULoc, diffuse); // pass in the diffuse reflectivity
