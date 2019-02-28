@@ -9,6 +9,8 @@ export class Camera {
     eye: vec3;
     center: vec3;
     up: vec3;
+    sun: vec3;
+    origin: vec3;
 
     perspective: mat4;
 
@@ -16,6 +18,8 @@ export class Camera {
         this.eye = eye;
         this.center = center;
         this.up = up;
+        this.sun = vec3.clone(up);
+        this.origin = vec3.fromValues(0,0,0);
         this.delta = delta;
         this.rotDelta = rotDelta;
         this.directions = {
@@ -43,6 +47,10 @@ export class Camera {
 
         let hpvMatrix = mat4.create();
         mat4.lookAt(hpvMatrix, this.eye, this.center, this.up); // create view matrix
+
+        // rotate the sun around the world
+        vec3.rotateX(this.sun, this.sun, this.origin, 0.005);
+        gl.uniform3fv(shader.sunDirectionULoc, this.sun);
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
