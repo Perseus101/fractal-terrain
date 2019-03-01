@@ -11,7 +11,9 @@ export class Shader {
 
     public pvmMatrixULoc: WebGLUniformLocation;
     public eyePositionULoc: WebGLUniformLocation;
+    public lookAtULoc: WebGLUniformLocation;
     public sunDirectionULoc: WebGLUniformLocation;
+    public flashLightOnULoc: WebGLUniformLocation;
 
     constructor(gl: WebGLRenderingContext,
             fShaderCode: string,
@@ -57,8 +59,9 @@ export class Shader {
 
         // locate fragment uniforms
         this.eyePositionULoc = gl.getUniformLocation(this.shaderProgram, "uEyePosition"); // ptr to eye position
+        this.lookAtULoc = gl.getUniformLocation(this.shaderProgram, "uLookAt"); // ptr to lookAt vector
+        this.flashLightOnULoc = gl.getUniformLocation(this.shaderProgram, "uFlashLightOn"); // ptr to toggle flashLight conditional
         let sunAmbientULoc = gl.getUniformLocation(this.shaderProgram, "uSunAmbient"); // ptr to light ambient
-        let sunDiffuseULoc = gl.getUniformLocation(this.shaderProgram, "uSunDiffuse"); // ptr to light diffuse
         let sunSpecularULoc = gl.getUniformLocation(this.shaderProgram, "uSunSpecular"); // ptr to light specular
         let moonAmbientULoc = gl.getUniformLocation(this.shaderProgram, "uMoonAmbient"); // ptr to light ambient
         let moonDiffuseULoc = gl.getUniformLocation(this.shaderProgram, "uMoonDiffuse"); // ptr to light diffuse
@@ -73,11 +76,10 @@ export class Shader {
         // var sunDirection = vec3.fromValues(0,1,0);
 
         var sunAmbient = vec3.fromValues(1, 1, 1); // default light ambient emission
-        var sunDiffuse = vec3.fromValues(1, 1, 1); // default light diffuse emission
         var sunSpecular = vec3.fromValues(1, 1, 1); // default light specular emission
 
         var moonAmbient = vec3.fromValues(1, 1, 1); // default light ambient emission
-        var moonDiffuse = vec3.fromValues(0.25, 0.53, 1); // default light diffuse emission
+        var moonDiffuse = vec3.fromValues(0.16, 0.18, 0.23); // default light diffuse emission
         var moonSpecular = vec3.fromValues(1, 1, 1); // default light specular emission
 
         var ambient = vec3.fromValues(0, 0, 0); // default ambient emission
@@ -103,7 +105,6 @@ export class Shader {
         // gl.uniformMatrix4fv(this.pvmMatrixULoc, false, hpvmMatrix); // pass in the hpvm matrix
 
         gl.uniform3fv(sunAmbientULoc, sunAmbient); // pass in the sun's ambient emission
-        gl.uniform3fv(sunDiffuseULoc, sunDiffuse); // pass in the sun's diffuse emission
         gl.uniform3fv(sunSpecularULoc, sunSpecular); // pass in the sun's specular emission
 
         gl.uniform3fv(moonAmbientULoc, moonAmbient); // pass in the moon's ambient emission

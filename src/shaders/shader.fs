@@ -2,10 +2,10 @@ precision mediump float; // set float to medium precision
 
 // eye location
 uniform vec3 uEyePosition; // the eye's position in world
+uniform vec3 uLookAt; // vector that indicates where the player is looking
 
 // light properties
 uniform vec3 uSunAmbient; // the light's ambient color
-uniform vec3 uSunDiffuse; // the light's diffuse color
 uniform vec3 uSunSpecular; // the light's specular color
 
 uniform vec3 uMoonAmbient; // the light's ambient color
@@ -13,6 +13,8 @@ uniform vec3 uMoonDiffuse; // the light's diffuse color
 uniform vec3 uMoonSpecular; // the light's specular color
 
 uniform vec3 uSunDirection; // the direction of the sun
+
+uniform int uFlashLightOn; // the power/color of the flashLight
 
 // material properties
 uniform vec3 uAmbient; // the ambient reflectivity
@@ -32,26 +34,43 @@ varying vec3 vVertexNormal; // normal of fragment
 void main(void) {
 
     // ambient term
-    vec3 ambient = uAmbient*uSunAmbient + uAmbient*uMoonAmbient;
+    vec3 ambient = uAmbient*uSunAmbient;
 
-    // diffuse term
+    // sunset
+    vec3 modifiedSun = vec3(0.4 + abs(uSunDirection.y) * 0.6, max(0.5, abs(uSunDirection.y)), max(0.5, min(0.92, abs(uSunDirection.y))));
+
+    // sun diffuse
     vec3 normal = normalize(vVertexNormal);
     vec3 sunLight = uSunDirection;
     float sunLambert = max(0.0,dot(normal,sunLight));
-    vec3 sunDiffuse = uDiffuse*uSunDiffuse*sunLambert; // diffuse term
+    vec3 sunDiffuse = uDiffuse*modifiedSun*sunLambert; // diffuse from sun
 
+    // moon diffuse
     vec3 moonLight = uSunDirection * -1.0;
     float moonLambert = max(0.0,dot(normal,moonLight));
-    vec3 moonDiffuse = uDiffuse*uMoonDiffuse*moonLambert; // diffuse term
+    vec3 moonDiffuse = uDiffuse*uMoonDiffuse*moonLambert; // diffuse from moon
+
+    // flashlight diffuse
+    vec3 eyeOffset = uEyePosition - vWorldPos;
+    vec3 eye = normalize(eyeOffset);
+    float flashLightLambert = max(0.0,dot(normal,eye));
+    vec3 flashLightDiffuse;
 
     // specular term
-    vec3 eye = normalize(uEyePosition - vWorldPos);
     vec3 halfVec = normalize(sunLight+eye);
     float highlight = pow(max(0.0,dot(normal,halfVec)),uShininess);
     vec3 specular = uSpecular*uSunSpecular*highlight; // specular term
 
+    // don't use flashLight if angle is too steep
+    float angle = dot(uLookAt, eye * -1.0);
+    if (angle > 0.8 && uFlashLightOn == 1) {
+        flashLightDiffuse = uDiffuse*flashLightLambert / length(eyeOffset); // diffuse from flashlight
+    } else {
+        flashLightDiffuse = vec3(0.0,0.0,0.0);
+    }
+
     // combine to find lit color
-    vec3 litColor = ambient + sunDiffuse + moonDiffuse;
+    vec3 litColor = ambient + sunDiffuse + moonDiffuse + flashLightDiffuse;
 
     gl_FragColor = vec4(litColor, 1.0);
 } // end main

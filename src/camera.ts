@@ -5,18 +5,22 @@ export class Camera {
     delta: number;
     rotDelta: number;
     directions: any;
+    flashLight: boolean;
 
     eye: vec3;
     center: vec3;
+    lookAt: vec3;
     up: vec3;
     sun: vec3;
     origin: vec3;
 
     perspective: mat4;
 
-    constructor(eye: vec3, center: vec3, up: vec3, delta: number = 0.05, rotDelta: number = 0.005) {
+    constructor(eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
+        this.lookAt = vec3.create();
+        vec3.subtract(this.lookAt, center, eye);
         this.up = up;
         this.sun = vec3.clone(up);
         this.origin = vec3.fromValues(0,0,0);
@@ -31,11 +35,13 @@ export class Camera {
             down: false,
         }
 
+        this.flashLight = false;
+
         var hMatrix = mat4.create(); // handedness matrix
         var pMatrix = mat4.create(); // projection matrix
 
         mat4.fromScaling(hMatrix, vec3.fromValues(-1, 1, 1)); // create handedness matrix
-        mat4.perspective(pMatrix, 0.5 * Math.PI, 1, 0.1, 10); // create projection matrix
+        mat4.perspective(pMatrix, 0.5 * Math.PI, 1, 0.001, 10); // create projection matrix
 
         this.perspective = mat4.create();
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
@@ -49,12 +55,14 @@ export class Camera {
         mat4.lookAt(hpvMatrix, this.eye, this.center, this.up); // create view matrix
 
         // rotate the sun around the world
-        vec3.rotateX(this.sun, this.sun, this.origin, 0.005);
+        vec3.rotateX(this.sun, this.sun, this.origin, 0.001);
         gl.uniform3fv(shader.sunDirectionULoc, this.sun);
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
+        gl.uniform3fv(shader.lookAtULoc, this.lookAt);
+        gl.uniform1i(shader.flashLightOnULoc, this.flashLight ? 1 : 0);
     }
 
     mouseInput(ev: MouseEvent) {
@@ -83,6 +91,7 @@ export class Camera {
         vec3.cross(this.up, lookAt, viewRight);
         // this.rotateY(-movementX * this.rotDelta);
         // this.rotateX(movementY * this.rotDelta);
+        this.lookAt = lookAt;
     }
 
     updateMovement() {
@@ -144,6 +153,10 @@ export class Camera {
         // LEFT SHIFT
         else if (event.keyCode == 16) {
             this.directions.down = true;
+        }
+        // F OR T FOR FLASHLIGHT
+        else if (event.keyCode == 70 || event.keyCode == 84) {
+            this.flashLight = !this.flashLight;
         }
     }
 
