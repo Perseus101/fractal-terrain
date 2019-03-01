@@ -2,11 +2,11 @@ import { vec3 } from 'gl-matrix';
 
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
-import { Environment } from './environment/environment';
-import { FractalA } from './environment/fractal_a';
+import { Drawable } from './drawable/drawable';
+import { Patch, FractalTree } from './drawable/fractal';
 import { Camera } from './camera';
 
-function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
+function render(gl: WebGLRenderingContext, shader: Shader, environment: Drawable, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
     camera.feed(gl, shader);
     environment.draw(gl, shader);
@@ -21,7 +21,14 @@ function main() {
     document.querySelector("body").appendChild(canvas);
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
-    let environment = new FractalA(gl);
+    let size = 5;
+    let patch = new Patch(
+        vec3.fromValues(-size, 0, -size),
+        vec3.fromValues(size, 0, -size),
+        vec3.fromValues(-size, 0, size),
+        vec3.fromValues(size, 0, size)
+    );
+    let environment = new FractalTree(gl, patch, 0, 1);
     let camera = new Camera(
         vec3.fromValues(0.5, 0.5, -0.5), // Eye
         vec3.fromValues(0.5, 0.5, 0.5), // Center

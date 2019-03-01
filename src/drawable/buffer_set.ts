@@ -9,7 +9,6 @@ export class BufferSet {
     constructor(gl: WebGLRenderingContext, vertices: any[], normals: any[], triangles: any[]) {
         let flatTriangles = (triangles as any).flat();
         this.triangleCount = flatTriangles.length;
-        console.log(this.triangleCount);
 
         this.vertexBuffer = gl.createBuffer(); // init empty webgl set vertex coord buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer); // activate that buffer

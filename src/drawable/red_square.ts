@@ -1,8 +1,8 @@
-import { Environment } from "./environment";
+import { Drawable } from "./drawable";
 import { Shader } from "../shaders/shader";
 import { BufferSet } from "./buffer_set";
 
-export class RedSquare extends Environment {
+export class RedSquare extends Drawable {
     buffers: BufferSet;
 
     constructor(gl: WebGLRenderingContext) {

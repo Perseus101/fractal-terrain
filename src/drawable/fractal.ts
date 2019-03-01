@@ -1,5 +1,5 @@
 import { vec3 } from 'gl-matrix';
-import { Environment } from "./environment";
+import { Drawable } from "./drawable";
 import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 
@@ -35,7 +35,7 @@ function seededRandomGauss(vec: vec3) {
 }
 
 function expRand(vec: vec3, n : number) {
-    return 0.5*seededRandomGauss(vec) / Math.pow(2, n + 1);
+    return 1*seededRandomGauss(vec) / Math.pow(2, n);
 }
 
 function reverse(binary: number, length: number) {
@@ -90,7 +90,7 @@ function getNormal(a : vec3, b : vec3, c : vec3) {
     return normal;
 }
 
-class Patch {
+export class Patch {
     bl: vec3;
     br: vec3;
     tl: vec3;
@@ -139,30 +139,51 @@ class Patch {
     }
 }
 
-export class FractalA extends Environment {
+export class FractalTree extends Drawable {
+    bl: Drawable;
+    br: Drawable;
+    tl: Drawable;
+    tr: Drawable;
+
+    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersUntilBuffering: number) {
+        super(gl);
+
+        let subs = patch.divide(depth);
+        if (layersUntilBuffering == 0) {
+            this.bl = new BufferedFractal(gl, subs[0], depth + 1, 8);
+            this.br = new BufferedFractal(gl, subs[1], depth + 1, 8);
+            this.tl = new BufferedFractal(gl, subs[2], depth + 1, 8);
+            this.tr = new BufferedFractal(gl, subs[3], depth + 1, 8);
+        } else {
+            this.bl = new FractalTree(gl, subs[0], depth + 1, layersUntilBuffering - 1);
+            this.br = new FractalTree(gl, subs[1], depth + 1, layersUntilBuffering - 1);
+            this.tl = new FractalTree(gl, subs[2], depth + 1, layersUntilBuffering - 1);
+            this.tr = new FractalTree(gl, subs[3], depth + 1, layersUntilBuffering - 1);
+        }
+    }
+
+    draw(gl: WebGLRenderingContext, shader: Shader) {
+        this.bl.draw(gl, shader);
+        this.br.draw(gl, shader);
+        this.tl.draw(gl, shader);
+        this.tr.draw(gl, shader);
+    }
+}
+
+export class BufferedFractal extends Drawable {
     finalDepth : number;
     quadNormals : vec3[];
     buffers: BufferSet;
 
-    constructor(gl: WebGLRenderingContext) {
+    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
         super(gl);
 
-        this.finalDepth = 7;
-        let patch = new Patch(
-            vec3.fromValues(-1, 0, -1),
-            vec3.fromValues(1, 0, -1),
-            vec3.fromValues(-1, 0, 1),
-            vec3.fromValues(1, 0, 1)
-        );
-        patch.bl[1] += expRand(patch.bl, 0);
-        patch.br[1] += expRand(patch.br, 0);
-        patch.tl[1] += expRand(patch.tl, 0);
-        patch.tr[1] += expRand(patch.tr, 0);
+        this.finalDepth = depth + layersToRecurse - 1;
 
         let quadNormals: vec3[] = [];
 
         let builder = new BufferSetBuilder();
-        this.fractalRecurse(builder, quadNormals, patch, 0);
+        this.fractalRecurse(builder, quadNormals, patch, depth);
 
         for (let i = 0; i < quadNormals.length / 3; i++) {
             let result = getCoord(i);

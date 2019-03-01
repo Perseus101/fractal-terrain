@@ -1,6 +1,6 @@
 import { Shader } from "../shaders/shader";
 
-export abstract class Environment {
+export abstract class Drawable {
     constructor(gl: WebGLRenderingContext) {
     }
 
