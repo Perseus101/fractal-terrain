@@ -1,5 +1,7 @@
 import { vec3 } from 'gl-matrix';
 import { Environment } from "./environment";
+import { BufferSet, BufferSetBuilder } from './buffer_set';
+import { Shader } from '../shaders/shader';
 
 const kBuf = new ArrayBuffer(8);
 const kBufAsF64 = new Float64Array(kBuf);
@@ -88,100 +90,127 @@ function getNormal(a : vec3, b : vec3, c : vec3) {
     return normal;
 }
 
+class Patch {
+    bl: vec3;
+    br: vec3;
+    tl: vec3;
+    tr: vec3;
+
+    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3) {
+        this.bl = bl;
+        this.br = br;
+        this.tl = tl;
+        this.tr = tr;
+    }
+
+    divide(n: number) {
+        let midLeft = vec3.create();
+        let midTop = vec3.create();
+        let midRight = vec3.create();
+        let midBottom = vec3.create();
+        let midPoint = vec3.create();
+
+        vec3.add(midLeft, this.bl, this.tl);
+        vec3.scale(midLeft, midLeft, 1 / 2);
+        vec3.add(midTop, this.tl, this.tr);
+        vec3.scale(midTop, midTop, 1 / 2);
+        vec3.add(midRight, this.tr, this.br);
+        vec3.scale(midRight, midRight, 1 / 2);
+        vec3.add(midBottom, this.br, this.bl);
+        vec3.scale(midBottom, midBottom, 1 / 2);
+
+        vec3.add(midPoint, this.bl, this.tl);
+        vec3.add(midPoint, midPoint, this.tr);
+        vec3.add(midPoint, midPoint, this.br);
+        vec3.scale(midPoint, midPoint, 1 / 4);
+
+        midLeft[1] += expRand(midLeft, n);
+        midTop[1] += expRand(midTop, n);
+        midRight[1] += expRand(midRight, n);
+        midBottom[1] += expRand(midBottom, n);
+        midPoint[1] += expRand(midPoint, n);
+
+        return [
+            new Patch(this.bl, midBottom, midLeft, midPoint), //bottom left corner
+            new Patch(midBottom, this.br, midPoint, midRight), //bottom right corner
+            new Patch(midLeft, midPoint, this.tl, midTop), //top left corner
+            new Patch(midPoint, midRight, midTop, this.tr) //top right corner
+        ]
+    }
+}
+
 export class FractalA extends Environment {
     finalDepth : number;
     quadNormals : vec3[];
+    buffers: BufferSet;
 
     constructor(gl: WebGLRenderingContext) {
         super(gl);
 
         this.finalDepth = 7;
-        let initBl = vec3.fromValues(-1, 0, -1);
-        let initTl = vec3.fromValues(-1, 0, 1);
-        let initTr = vec3.fromValues(1, 0, 1);
-        let initBr = vec3.fromValues(1, 0, -1);
-        initBl[1] += expRand(initBl, 0);
-        initTl[1] += expRand(initTl, 0);
-        initTr[1] += expRand(initTr, 0);
-        initBr[1] += expRand(initBr, 0);
-        this.quadNormals = [];
+        let patch = new Patch(
+            vec3.fromValues(-1, 0, -1),
+            vec3.fromValues(1, 0, -1),
+            vec3.fromValues(-1, 0, 1),
+            vec3.fromValues(1, 0, 1)
+        );
+        patch.bl[1] += expRand(patch.bl, 0);
+        patch.br[1] += expRand(patch.br, 0);
+        patch.tl[1] += expRand(patch.tl, 0);
+        patch.tr[1] += expRand(patch.tr, 0);
 
-        this.fractalRecurse(initBl, initBr, initTl, initTr, 0);
+        let quadNormals: vec3[] = [];
 
-        for (let i = 0; i < this.quadNormals.length / 3; i++) {
+        let builder = new BufferSetBuilder();
+        this.fractalRecurse(builder, quadNormals, patch, 0);
+
+        for (let i = 0; i < quadNormals.length / 3; i++) {
             let result = getCoord(i);
             let x = result[0];
             let y = result[1];
 
-            this.addNormals(x, y);
-            this.addNormals(x + 1, y);
-            this.addNormals(x, y + 1);
-            this.addNormals(x + 1, y + 1);
+            this.addNormals(builder, quadNormals, x, y);
+            this.addNormals(builder, quadNormals, x + 1, y);
+            this.addNormals(builder, quadNormals, x, y + 1);
+            this.addNormals(builder, quadNormals, x + 1, y + 1);
         }
 
-        this.triangleCount = this.triangles.length / 3;
-
-        this.createBuffers(gl);
+        this.buffers = builder.build(gl);
     }
 
-    fractalRecurse(bl: vec3, br: vec3, tl: vec3, tr: vec3, n: number) {
+    fractalRecurse(builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number) {
         if (n == this.finalDepth) {
             // this adds a square
-            this.vertices.push(bl[0], bl[1], bl[2]);
-            this.vertices.push(br[0], br[1], br[2]);
-            this.vertices.push(tl[0], tl[1], tl[2]);
-            this.vertices.push(tr[0], tr[1], tr[2]);
+            builder.vertices.push(patch.bl[0], patch.bl[1], patch.bl[2]);
+            builder.vertices.push(patch.br[0], patch.br[1], patch.br[2]);
+            builder.vertices.push(patch.tl[0], patch.tl[1], patch.tl[2]);
+            builder.vertices.push(patch.tr[0], patch.tr[1], patch.tr[2]);
 
-            let normA = getNormal(bl, tl, br);
-            let normB = getNormal(tl, tr, br);
+            let normA = getNormal(patch.bl, patch.tl, patch.br);
+            let normB = getNormal(patch.tl, patch.tr, patch.br);
             let sum = vec3.create();
             vec3.add(sum, normA, normB);
-            this.quadNormals.push(normA, normB, sum);
+            quadNormals.push(normA, normB, sum);
 
             // let normal = vec3.create();
             // vec3.normalize(normal, sum);
-            // this.normals.push(normA[0], normA[1], normA[2]);
-            // this.normals.push(normal[0], normal[1], normal[2]);
-            // this.normals.push(normB[0], normB[1], normB[2]);
-            // this.normals.push(normal[0], normal[1], normal[2]);
+            // builder.normals.push(normA[0], normA[1], normA[2]);
+            // builder.normals.push(normal[0], normal[1], normal[2]);
+            // builder.normals.push(normB[0], normB[1], normB[2]);
+            // builder.normals.push(normal[0], normal[1], normal[2]);
 
-            let len = this.vertices.length / 3;
-            this.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);
+            let len = builder.vertices.length / 3;
+            builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);
         } else {
-            let midLeft = vec3.create();
-            let midTop = vec3.create();
-            let midRight = vec3.create();
-            let midBottom = vec3.create();
-            let midPoint = vec3.create();
+            let subPatches = patch.divide(n);
 
-            vec3.add(midLeft, bl, tl);
-            vec3.scale(midLeft, midLeft, 1 / 2);
-            vec3.add(midTop, tl, tr);
-            vec3.scale(midTop, midTop, 1 / 2);
-            vec3.add(midRight, tr, br);
-            vec3.scale(midRight, midRight, 1 / 2);
-            vec3.add(midBottom, br, bl);
-            vec3.scale(midBottom, midBottom, 1 / 2);
-
-            vec3.add(midPoint, bl, tl);
-            vec3.add(midPoint, midPoint, tr);
-            vec3.add(midPoint, midPoint, br);
-            vec3.scale(midPoint, midPoint, 1 / 4);
-
-            midLeft[1] += expRand(midLeft, n);
-            midTop[1] += expRand(midTop, n);
-            midRight[1] += expRand(midRight, n);
-            midBottom[1] += expRand(midBottom, n);
-            midPoint[1] += expRand(midPoint, n);
-
-            this.fractalRecurse(bl, midBottom, midLeft, midPoint, n + 1); //bottom left corner
-            this.fractalRecurse(midBottom, br, midPoint, midRight, n + 1); //bottom right corner
-            this.fractalRecurse(midLeft, midPoint, tl, midTop, n + 1); //top left corner
-            this.fractalRecurse(midPoint, midRight, midTop, tr, n + 1); //top right corner
+            for (let subPatch of subPatches) {
+                this.fractalRecurse(builder, quadNormals, subPatch, n + 1);
+            }
         }
     }
 
-    addNormals(x: number, y: number) {
+    addNormals(builder: BufferSetBuilder, quadNormals: vec3[], x: number, y: number) {
         //averages the normals of   x,y   x+1,y   x+1,y+1   x,y+1, and throws it into the normals array
         let a = getIndex(x - 1, y - 1) * 3 + 1;
         let b = getIndex(x, y - 1) * 3 + 2;
@@ -190,16 +219,20 @@ export class FractalA extends Environment {
 
         let normal = vec3.create();
 
-        if (a >= 0 && a < this.quadNormals.length)
-            vec3.add(normal, normal, this.quadNormals[a]);
-        if (b >= 0 && b < this.quadNormals.length)
-            vec3.add(normal, normal, this.quadNormals[b]);
-        if (c >= 0 && c < this.quadNormals.length)
-            vec3.add(normal, normal, this.quadNormals[c]);
-        if (d >= 0 && d < this.quadNormals.length)
-            vec3.add(normal, normal, this.quadNormals[d]);
+        if (a >= 0 && a < quadNormals.length)
+            vec3.add(normal, normal, quadNormals[a]);
+        if (b >= 0 && b < quadNormals.length)
+            vec3.add(normal, normal, quadNormals[b]);
+        if (c >= 0 && c < quadNormals.length)
+            vec3.add(normal, normal, quadNormals[c]);
+        if (d >= 0 && d < quadNormals.length)
+            vec3.add(normal, normal, quadNormals[d]);
 
         vec3.normalize(normal, normal);
-        this.normals.push(normal[0], normal[1], normal[2]);
+        builder.normals.push(normal[0], normal[1], normal[2]);
+    }
+
+    draw(gl: WebGLRenderingContext, shader: Shader) {
+        this.buffers.draw(gl, shader);
     }
 }

@@ -1,30 +1,36 @@
 import { Environment } from "./environment";
+import { Shader } from "../shaders/shader";
+import { BufferSet } from "./buffer_set";
 
 export class RedSquare extends Environment {
+    buffers: BufferSet;
+
     constructor(gl: WebGLRenderingContext) {
         super(gl);
 
-        this.vertices = [
+        let vertices = [
             [ 0.0, 0.0, 1.0 ],
             [ 0.0, 1.0, 1.0 ],
             [ 1.0, 1.0, 1.0 ],
             [ 1.0, 0.0, 1.0 ],
         ];
 
-        this.normals = [
+        let normals = [
             [ 0.0, 0.0, -1.0 ],
             [ 0.0, 0.0, -1.0 ],
             [ 0.0, 0.0, -1.0 ],
             [ 0.0, 0.0, -1.0 ],
         ];
 
-        this.triangles =  [
+        let triangles =  [
             [ 0, 1, 2 ],
             [ 2, 3, 0 ],
         ];
 
-        this.triangleCount = this.triangles.length;
+        this.buffers = new BufferSet(gl, vertices, normals, triangles);
+    }
 
-        this.createBuffers(gl);
+    draw(gl: WebGLRenderingContext, shader: Shader) {
+        this.buffers.draw(gl, shader);
     }
 }
