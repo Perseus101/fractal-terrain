@@ -14,7 +14,7 @@ uniform vec3 uMoonSpecular; // the light's specular color
 
 uniform vec3 uSunDirection; // the direction of the sun
 
-uniform int uFlashLightOn; // the power/color of the flashLight
+uniform float uFlashLightOn; // the power/color of the flashLight
 
 // material properties
 uniform vec3 uAmbient; // the ambient reflectivity
@@ -54,7 +54,6 @@ void main(void) {
     vec3 eyeOffset = uEyePosition - vWorldPos;
     vec3 eye = normalize(eyeOffset);
     float flashLightLambert = max(0.0,dot(normal,eye));
-    vec3 flashLightDiffuse;
 
     // specular term
     vec3 halfVec = normalize(sunLight+eye);
@@ -63,11 +62,9 @@ void main(void) {
 
     // don't use flashLight if angle is too steep
     float angle = dot(uLookAt, eye * -1.0);
-    if (angle > 0.8 && uFlashLightOn == 1) {
-        flashLightDiffuse = uDiffuse*flashLightLambert / length(eyeOffset); // diffuse from flashlight
-    } else {
-        flashLightDiffuse = vec3(0.0,0.0,0.0);
-    }
+    float lightValue = pow(angle, 4.0) * uFlashLightOn / pow(max(1.0, length(eyeOffset)*4.0), 2.0);
+    vec3 flashLightDiffuse;
+    flashLightDiffuse = uDiffuse*flashLightLambert * lightValue;
 
     // combine to find lit color
     vec3 litColor = ambient + sunDiffuse + moonDiffuse + flashLightDiffuse;

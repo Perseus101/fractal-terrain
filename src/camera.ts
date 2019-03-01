@@ -62,7 +62,7 @@ export class Camera {
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
         gl.uniform3fv(shader.lookAtULoc, this.lookAt);
-        gl.uniform1i(shader.flashLightOnULoc, this.flashLight ? 1 : 0);
+        gl.uniform1f(shader.flashLightOnULoc, this.flashLight ? 1.0 : 0.0);
     }
 
     mouseInput(ev: MouseEvent) {
