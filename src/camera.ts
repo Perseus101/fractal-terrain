@@ -14,6 +14,9 @@ export class Camera {
     sun: vec3;
     origin: vec3;
 
+    dayColor: vec3;
+    nightColor: vec3;
+
     perspective: mat4;
 
     constructor(eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
@@ -34,6 +37,9 @@ export class Camera {
             up: false,
             down: false,
         }
+
+        this.dayColor = vec3.fromValues(0.3, 0.56, 0.68);
+        this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
 
@@ -63,6 +69,13 @@ export class Camera {
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
         gl.uniform3fv(shader.lookAtULoc, this.lookAt);
         gl.uniform1f(shader.flashLightOnULoc, this.flashLight ? 1.0 : 0.0);
+
+        // update the color of the sky
+        let colorDif = vec3.create();
+        vec3.sub(colorDif, this.nightColor, this.dayColor);
+        vec3.scale(colorDif, colorDif, 1 - (this.sun[1]/2.0+0.5));
+        vec3.add(colorDif, this.dayColor, colorDif);
+        gl.clearColor(colorDif[0], colorDif[1], colorDif[2], 1.0);
     }
 
     mouseInput(ev: MouseEvent) {
