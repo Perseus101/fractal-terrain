@@ -62,7 +62,11 @@ void main(void) {
 
     // don't use flashLight if angle is too steep
     float angle = dot(uLookAt, eye * -1.0);
+<<<<<<< HEAD
     float lightValue = pow(angle, 5.0) * uFlashLightOn / pow(max(1.0, length(eyeOffset)*4.0), 2.0);
+=======
+    float lightValue = pow(angle, 4.0) * uFlashLightOn / 2.0;//pow(max(1.0, length(eyeOffset)*4.0), 2.0);
+>>>>>>> d2c6efd22e6f4ae1a18250639dd9daea8262a659
     vec3 flashLightDiffuse;
     flashLightDiffuse = uDiffuse*flashLightLambert * lightValue;
 

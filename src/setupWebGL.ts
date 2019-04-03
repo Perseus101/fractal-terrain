@@ -13,5 +13,6 @@ export function setupWebGL(canvas: HTMLCanvasElement): WebGLRenderingContext {
         gl.clearDepth(1.0); // use max when we clear the depth buffer
         gl.enable(gl.DEPTH_TEST); // enable depth test
     }
+
     return gl;
 }

@@ -15,10 +15,7 @@ function render(gl: WebGLRenderingContext, shader: Shader, environment: Drawable
 }
 
 function main() {
-    let canvas = document.createElement("canvas");
-    canvas.height = 512;
-    canvas.width = 512;
-    document.querySelector("body").appendChild(canvas);
+    let canvas: any = document.getElementById("canvas");
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
     let size = 5;
@@ -30,18 +27,42 @@ function main() {
     );
     let environment = new FractalTree(gl, patch, 0, 1);
     let camera = new Camera(
+        gl,
         vec3.fromValues(0.5, 0.5, -0.5), // Eye
         vec3.fromValues(0.5, 0.5, 0.5), // Center
         vec3.fromValues(0, 1, 0) // Up
     );
 
     // Add event listeners
-    setupCallbacks(camera, canvas);
+    setupCallbacks(gl, camera, canvas);
 
     render(gl, shader, environment, camera);
 }
 
-function setupCallbacks(camera: Camera, canvas: HTMLElement) {
+function setupCallbacks(gl: WebGLRenderingContext, camera: Camera, canvas: HTMLElement) {
+    function onResize() {
+        let realToCSSPixels = window.devicePixelRatio;
+
+        // Lookup the size the browser is displaying the canvas in CSS pixels
+        // and compute a size needed to make our drawingbuffer match it in
+        // device pixels.
+        let displayWidth = Math.floor(gl.canvas.clientWidth * realToCSSPixels);
+        let displayHeight = Math.floor(gl.canvas.clientHeight * realToCSSPixels);
+
+        // Check if the canvas is not the same size.
+        if (gl.canvas.width !== displayWidth || gl.canvas.height !== displayHeight) {
+            console.log(gl.canvas.width, gl.canvas.height, displayWidth, displayHeight);
+            // Make the canvas the same size
+            gl.canvas.width = displayWidth;
+            gl.canvas.height = displayHeight;
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            camera.createPerspective(gl);
+        }
+    }
+
+    window.addEventListener("resize", onResize);
+    onResize();
+
     document.addEventListener('keydown', (ev: KeyboardEvent) => camera.keyDown(ev), false);
     document.addEventListener('keyup', (ev: KeyboardEvent) => camera.keyUp(ev), false);
 
