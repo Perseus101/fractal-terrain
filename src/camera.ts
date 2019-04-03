@@ -16,7 +16,7 @@ export class Camera {
 
     perspective: mat4;
 
-    constructor(eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
+    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
         this.lookAt = vec3.create();
@@ -37,13 +37,17 @@ export class Camera {
 
         this.flashLight = false;
 
+        this.perspective = mat4.create();
+        this.createPerspective(gl);
+    }
+
+    createPerspective(gl: WebGLRenderingContext) {
         var hMatrix = mat4.create(); // handedness matrix
         var pMatrix = mat4.create(); // projection matrix
 
         mat4.fromScaling(hMatrix, vec3.fromValues(-1, 1, 1)); // create handedness matrix
-        mat4.perspective(pMatrix, 0.5 * Math.PI, 1, 0.001, 10); // create projection matrix
+        mat4.perspective(pMatrix, 0.4 * Math.PI, gl.canvas.width / gl.canvas.height, 0.001, 10); // create projection matrix
 
-        this.perspective = mat4.create();
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
     }
 
