@@ -2,12 +2,10 @@ import { Drawable } from "./drawable";
 import { Shader } from "../shaders/shader";
 import { BufferSet } from "./buffer_set";
 
-export class RedSquare extends Drawable {
+export class RedSquare implements Drawable {
     buffers: BufferSet;
 
     constructor(gl: WebGLRenderingContext) {
-        super(gl);
-
         let vertices = [
             [ 0.0, 0.0, 1.0 ],
             [ 0.0, 1.0, 1.0 ],

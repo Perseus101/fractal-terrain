@@ -1,7 +1,7 @@
 import { vec3 } from 'gl-matrix';
-import { Drawable } from "./drawable";
 import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
+import { Environment } from './environment';
 
 const kBuf = new ArrayBuffer(8);
 const kBufAsF64 = new Float64Array(kBuf);
@@ -90,11 +90,13 @@ function getNormal(a : vec3, b : vec3, c : vec3) {
     return normal;
 }
 
+//this is basically a dividable quadrilateral
 export class Patch {
     bl: vec3;
     br: vec3;
     tl: vec3;
     tr: vec3;
+    midpoint: vec3;
 
     constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3) {
         this.bl = bl;
@@ -103,12 +105,22 @@ export class Patch {
         this.tr = tr;
     }
 
+    computeMidpoint() {
+        let midpoint = vec3.create();
+
+        vec3.add(midpoint, this.bl, this.tl);
+        vec3.add(midpoint, midpoint, this.tr);
+        vec3.add(midpoint, midpoint, this.br);
+        vec3.scale(midpoint, midpoint, 1 / 4);
+
+        return midpoint;
+    }
+
     divide(n: number) {
         let midLeft = vec3.create();
         let midTop = vec3.create();
         let midRight = vec3.create();
         let midBottom = vec3.create();
-        let midPoint = vec3.create();
 
         vec3.add(midLeft, this.bl, this.tl);
         vec3.scale(midLeft, midLeft, 1 / 2);
@@ -119,34 +131,52 @@ export class Patch {
         vec3.add(midBottom, this.br, this.bl);
         vec3.scale(midBottom, midBottom, 1 / 2);
 
-        vec3.add(midPoint, this.bl, this.tl);
-        vec3.add(midPoint, midPoint, this.tr);
-        vec3.add(midPoint, midPoint, this.br);
-        vec3.scale(midPoint, midPoint, 1 / 4);
+        let midpoint = this.computeMidpoint();
 
         midLeft[1] += expRand(midLeft, n);
         midTop[1] += expRand(midTop, n);
         midRight[1] += expRand(midRight, n);
         midBottom[1] += expRand(midBottom, n);
-        midPoint[1] += expRand(midPoint, n);
+        midpoint[1] += expRand(midpoint, n);
 
         return [
-            new Patch(this.bl, midBottom, midLeft, midPoint), //bottom left corner
-            new Patch(midBottom, this.br, midPoint, midRight), //bottom right corner
-            new Patch(midLeft, midPoint, this.tl, midTop), //top left corner
-            new Patch(midPoint, midRight, midTop, this.tr) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midpoint), //bottom left corner
+            new Patch(midBottom, this.br, midpoint, midRight), //bottom right corner
+            new Patch(midLeft, midpoint, this.tl, midTop), //top left corner
+            new Patch(midpoint, midRight, midTop, this.tr) //top right corner
         ]
     }
 }
 
-export class FractalTree extends Drawable {
-    bl: Drawable;
-    br: Drawable;
-    tl: Drawable;
-    tr: Drawable;
+abstract class Fractal implements Environment {
+    abstract getBufferedFractalAt(p: vec3): BufferedFractal;
+    abstract getYAt(p: vec3): number;
+    abstract draw(gl: WebGLRenderingContext, shader: Shader): void;
+
+    updatePositionGivenCollisions(pos: vec3): boolean {
+        let newY = this.getYAt(pos);
+        // console.log(pos[1], newY);
+        if (newY != pos[1]) {
+            pos[1] = newY + 0.1;
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+//This is the tree that either contains more trees, or eventually a BufferedFractal which is a leaf node
+export class FractalTree extends Fractal {
+    bl: Fractal;
+    br: Fractal;
+    tl: Fractal;
+    tr: Fractal;
+    midpoint: vec3;
 
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersUntilBuffering: number) {
-        super(gl);
+        super();
+
+        this.midpoint = patch.computeMidpoint();
 
         let subs = patch.divide(depth);
         if (layersUntilBuffering == 0) {
@@ -168,16 +198,43 @@ export class FractalTree extends Drawable {
         this.tl.draw(gl, shader);
         this.tr.draw(gl, shader);
     }
+
+    getBufferedFractalAt(p: vec3): BufferedFractal {
+        let fractal;
+        if (p[0] > this.midpoint[0]) {
+            if (p[2] > this.midpoint[2]) {
+                fractal = this.tr;
+            } else {
+                fractal = this.br;
+            }
+        } else {
+            if (p[2] > this.midpoint[2]) {
+                fractal = this.tl;
+            } else {
+                fractal = this.bl;
+            }
+        }
+        return fractal.getBufferedFractalAt(p);
+    }
+
+    getYAt(p: vec3): number {
+        return this.getBufferedFractalAt(p).getYAt(p);
+    }
 }
 
-export class BufferedFractal extends Drawable {
+//This is a leaf of a fractal tree, and actually contains buffer data that can be drawn
+export class BufferedFractal extends Fractal {
     finalDepth : number;
     quadNormals : vec3[];
     buffers: BufferSet;
+    patch: Patch;
+    saved_vertices: number[];
+    sqrtSize: number;
 
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
-        super(gl);
+        super();
 
+        this.patch = patch;
         this.finalDepth = depth + layersToRecurse - 1;
 
         let quadNormals: vec3[] = [];
@@ -197,6 +254,8 @@ export class BufferedFractal extends Drawable {
         }
 
         this.buffers = builder.build(gl);
+        this.sqrtSize = Math.pow(2, layersToRecurse);
+        this.saved_vertices = builder.vertices;
     }
 
     fractalRecurse(builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number) {
@@ -255,5 +314,37 @@ export class BufferedFractal extends Drawable {
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
         this.buffers.draw(gl, shader);
+    }
+
+    getBufferedFractalAt(p: vec3): BufferedFractal {
+        return this;
+    }
+
+    getYAt(p: vec3): number {
+        //what fraction we are into this patch
+        let xp = (p[0] - this.patch.bl[0]) / (this.patch.br[0] - this.patch.bl[0]);
+        let yp = (p[2] - this.patch.bl[2]) / (this.patch.tl[2] - this.patch.bl[2]);
+
+        let size = this.sqrtSize - 1;
+
+        //what integer x y coordinates into our grid of vertices that corresponds to
+        let x = Math.floor(xp * size);
+        let y = Math.floor(yp * size);
+
+        //what percentage inside the mini square between the smallest points in our grid is
+        let xpp = xp * size - x;
+        let ypp = yp * size - y;
+
+        let bl = this.saved_vertices[getIndex(x, y)         * 3 + 1];
+        let br = this.saved_vertices[getIndex(x + 1, y)     * 3 + 1];
+        let tl = this.saved_vertices[getIndex(x, y + 1)     * 3 + 1];
+        let tr = this.saved_vertices[getIndex(x + 1, y + 1) * 3 + 1];
+
+        let left_interp = (1 - ypp) * bl + ypp * tl;
+        let right_interp = (1 - ypp) * br + ypp * tr;
+
+        let interp = (1-xpp) * left_interp + xpp*right_interp;
+
+        return interp;
     }
 }

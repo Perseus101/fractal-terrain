@@ -1,5 +1,6 @@
 import { vec3, mat4 } from 'gl-matrix';
 import { Shader } from './shaders/shader';
+import { Environment } from './drawable/environment';
 
 export class Camera {
     delta: number;
@@ -57,9 +58,9 @@ export class Camera {
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
     }
 
-    feed(gl: WebGLRenderingContext, shader: Shader) {
+    feed(gl: WebGLRenderingContext, shader: Shader, env: Environment) {
         // Update movement delta
-        this.updateMovement();
+        this.updateMovement(env);
 
         let hpvMatrix = mat4.create();
         mat4.lookAt(hpvMatrix, this.eye, this.center, this.up); // create view matrix
@@ -111,7 +112,7 @@ export class Camera {
         this.lookAt = lookAt;
     }
 
-    updateMovement() {
+    updateMovement(env: Environment) {
         var lookAt = vec3.create(), viewRight = vec3.create(), temp = vec3.create(); // lookat, right & temp vectors
         lookAt = vec3.normalize(lookAt, vec3.subtract(temp, this.center, this.eye)); // get lookat vector
         viewRight = vec3.normalize(viewRight, vec3.cross(temp, this.up, lookAt)); // get view right vector
@@ -143,7 +144,8 @@ export class Camera {
         }
 
         vec3.add(this.eye, delta, this.eye);
-        vec3.add(this.center, delta, this.center);
+        env.updatePositionGivenCollisions(this.eye);
+        vec3.add(this.center, lookAt, this.eye);
     }
 
     keyDown(event: KeyboardEvent) {
