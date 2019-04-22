@@ -5,6 +5,7 @@ import { createShader, Shader } from './shaders/shader';
 import { Environment } from './drawable/environment';
 import { Patch, FractalTree } from './drawable/fractal';
 import { Camera } from './camera';
+import RNG from './rng';
 
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
@@ -23,7 +24,8 @@ function main() {
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
         vec3.fromValues(-size, 0, size),
-        vec3.fromValues(size, 0, size)
+        vec3.fromValues(size, 0, size),
+        new RNG(Math.random())
     );
     let environment = new FractalTree(gl, patch, 0, 1);
     let camera = new Camera(

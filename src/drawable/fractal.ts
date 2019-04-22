@@ -2,41 +2,7 @@ import { vec3 } from 'gl-matrix';
 import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
-
-const kBuf = new ArrayBuffer(8);
-const kBufAsF64 = new Float64Array(kBuf);
-const kBufAsI32 = new Int32Array(kBuf);
-
-function hashFloat(n: number) {
-    // Remove this `if` if you want 0 and -0 to hash to different values.
-    if (~~n === n) {
-        return ~~n;
-    }
-    kBufAsF64[0] = n;
-    return kBufAsI32[0] ^ kBufAsI32[1];
-}
-
-function hashCombine(lhs: number, rhs: number) {
-    return lhs * 19 + rhs;
-}
-
-var globalSeed = hashFloat(Math.random());
-
-function seededRandom(vec: vec3) {
-    let seed = hashCombine(hashCombine(hashCombine(globalSeed, vec[0]), vec[1]), vec[2]);
-    let x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-}
-
-function seededRandomGauss(vec: vec3) {
-    let randA = seededRandom(vec);
-    let randB = seededRandom(vec3.fromValues(vec[0] + randA, vec[1] + randA, vec[2] + randA));
-    return Math.sqrt(-2 * Math.log(randA)) * Math.cos(2 * Math.PI * randB);
-}
-
-function expRand(vec: vec3, n : number) {
-    return 1*seededRandomGauss(vec) / Math.pow(2, n);
-}
+import RNG from '../rng';
 
 function reverse(binary: number, length: number) {
     let result = 0;
@@ -97,12 +63,14 @@ export class Patch {
     tl: vec3;
     tr: vec3;
     midpoint: vec3;
+    rng: RNG;
 
-    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3) {
+    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG) {
         this.bl = bl;
         this.br = br;
         this.tl = tl;
         this.tr = tr;
+        this.rng = rng;
     }
 
     computeMidpoint() {
@@ -133,17 +101,17 @@ export class Patch {
 
         let midpoint = this.computeMidpoint();
 
-        midLeft[1] += expRand(midLeft, n);
-        midTop[1] += expRand(midTop, n);
-        midRight[1] += expRand(midRight, n);
-        midBottom[1] += expRand(midBottom, n);
-        midpoint[1] += expRand(midpoint, n);
+        midLeft[1] += this.rng.expRand(midLeft, n);
+        midTop[1] += this.rng.expRand(midTop, n);
+        midRight[1] += this.rng.expRand(midRight, n);
+        midBottom[1] += this.rng.expRand(midBottom, n);
+        midpoint[1] += this.rng.expRand(midpoint, n);
 
         return [
-            new Patch(this.bl, midBottom, midLeft, midpoint), //bottom left corner
-            new Patch(midBottom, this.br, midpoint, midRight), //bottom right corner
-            new Patch(midLeft, midpoint, this.tl, midTop), //top left corner
-            new Patch(midpoint, midRight, midTop, this.tr) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng), //bottom left corner
+            new Patch(midBottom, this.br, midpoint, midRight, this.rng), //bottom right corner
+            new Patch(midLeft, midpoint, this.tl, midTop, this.rng), //top left corner
+            new Patch(midpoint, midRight, midTop, this.tr, this.rng) //top right corner
         ]
     }
 }
