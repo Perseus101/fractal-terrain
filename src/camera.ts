@@ -7,6 +7,7 @@ export class Camera {
     rotDelta: number;
     directions: any;
     flashLight: boolean;
+    gravity: boolean;
 
     eye: vec3;
     center: vec3;
@@ -20,7 +21,7 @@ export class Camera {
 
     perspective: mat4;
 
-    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
+    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.02, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
         this.lookAt = vec3.create();
@@ -43,6 +44,7 @@ export class Camera {
         this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
+        this.gravity = true;
 
         this.perspective = mat4.create();
         this.createPerspective(gl);
@@ -144,7 +146,9 @@ export class Camera {
         }
 
         vec3.add(this.eye, delta, this.eye);
-        env.updatePositionGivenCollisions(this.eye);
+        if(this.gravity) {
+            env.updatePositionGivenCollisions(this.eye);
+        }
         vec3.add(this.center, lookAt, this.eye);
     }
 
@@ -176,6 +180,10 @@ export class Camera {
         // F OR T FOR FLASHLIGHT
         else if (event.keyCode == 70 || event.keyCode == 84) {
             this.flashLight = !this.flashLight;
+        }
+        // G for Gravity toggle
+        else if (event.keyCode ==  71) {
+            this.gravity = !this.gravity;
         }
     }
 
