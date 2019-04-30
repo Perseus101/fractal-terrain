@@ -21,7 +21,7 @@ export class Camera {
 
     perspective: mat4;
 
-    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.02, rotDelta: number = 0.005) {
+    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.1, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
         this.lookAt = vec3.create();
@@ -44,7 +44,7 @@ export class Camera {
         this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
-        this.gravity = true;
+        this.gravity = false;
 
         this.perspective = mat4.create();
         this.createPerspective(gl);
