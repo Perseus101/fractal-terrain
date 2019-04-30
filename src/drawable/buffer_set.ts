@@ -25,6 +25,7 @@ export class BufferSet {
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
+        gl.uniformMatrix4fv(shader.mMatrixULoc, false, mat4.create());
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer); // activate vertex buffer
         gl.vertexAttribPointer(shader.vPosAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
         gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer); // activate normal buffer
