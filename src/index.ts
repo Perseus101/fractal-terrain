@@ -10,6 +10,7 @@ import RNG from './rng';
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
     camera.feed(gl, shader, environment);
+    (environment as FractalNode).expandAndPruneTree(camera.getPlayerPosition());
     environment.draw(gl, shader);
 
     requestAnimationFrame(() => render(gl, shader, environment, camera)); // set up frame render callback
@@ -27,7 +28,7 @@ function main() {
         vec3.fromValues(size, 0, size),
         new RNG(Math.random())
     );
-    let environment = new FractalNode(gl, patch, 0, 1).recurse();
+    let environment = new FractalNode(gl, patch, 0, 3, true).recurse();
     environment.becomeNewRoot(Quadrant.Bl);
     (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
