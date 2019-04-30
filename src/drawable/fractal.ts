@@ -1,4 +1,4 @@
-import { vec3 } from 'gl-matrix';
+import { vec3, mat4 } from 'gl-matrix';
 import { Drawable } from "./drawable";
 import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
@@ -96,11 +96,15 @@ export class Patch {
     tl: vec3;
     tr: vec3;
 
-    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3) {
+    barren: boolean
+    hasFlora: boolean;
+
+    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, barren: boolean) {
         this.bl = bl;
         this.br = br;
         this.tl = tl;
         this.tr = tr;
+        this.barren = barren;
     }
 
     divide(n: number) {
@@ -130,11 +134,18 @@ export class Patch {
         midBottom[1] += expRand(midBottom, n);
         midPoint[1] += expRand(midPoint, n);
 
+        // give this patch some flora
+        let size = vec3.length(vec3.sub(vec3.create(), this.bl, this.br));
+        if (!this.barren && seededRandom(midPoint) > size) {
+            // console.log("has Flora");
+            this.hasFlora = true;
+        }
+
         return [
-            new Patch(this.bl, midBottom, midLeft, midPoint), //bottom left corner
-            new Patch(midBottom, this.br, midPoint, midRight), //bottom right corner
-            new Patch(midLeft, midPoint, this.tl, midTop), //top left corner
-            new Patch(midPoint, midRight, midTop, this.tr) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midPoint, this.hasFlora), //bottom left corner
+            new Patch(midBottom, this.br, midPoint, midRight, this.hasFlora), //bottom right corner
+            new Patch(midLeft, midPoint, this.tl, midTop, this.hasFlora), //top left corner
+            new Patch(midPoint, midRight, midTop, this.tr, this.hasFlora) //top right corner
         ]
     }
 }
@@ -149,6 +160,7 @@ export class FractalTree extends Drawable {
         super(gl);
 
         let subs = patch.divide(depth);
+
         if (layersUntilBuffering == 0) {
             this.bl = new BufferedFractal(gl, subs[0], depth + 1, 8);
             this.br = new BufferedFractal(gl, subs[1], depth + 1, 8);
@@ -255,5 +267,47 @@ export class BufferedFractal extends Drawable {
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
         this.buffers.draw(gl, shader);
+    }
+}
+
+
+
+export class Flora extends Drawable {
+
+    static treeModel;
+    modelBuffer: BufferSet;
+
+    constructor(gl: WebGLRenderingContext, patch: Patch) {
+        super(gl);
+
+        // Translate the model to a location on the patch
+        let loc = patch.bl;
+
+        // Scale the model based on the size of the patch
+        let size = vec3.length(vec3.sub(vec3.create(), patch.bl, patch.tr));
+        size /= 9.0;
+
+        let mMatrix = mat4.create();
+        // scale
+        mMatrix[0] = size;
+        mMatrix[5] = size;
+        mMatrix[10] = size;
+        // translate
+        mMatrix[12] = loc[0];
+        mMatrix[13] = loc[1];
+        mMatrix[14] = loc[2];
+        let mVertices = [];
+        for (let vert of Flora.treeModel.vertices) {
+            let vertex = vec3.fromValues(vert[0], vert[1], vert[2]);
+            let mVertex = vec3.create();
+            vec3.transformMat4(mVertex, vertex, mMatrix)
+            mVertices.push([mVertex[0], mVertex[1], mVertex[2]]);
+        }
+
+        this.modelBuffer = new BufferSet(gl, mVertices, Flora.treeModel.normals, Flora.treeModel.triangles);
+    }
+
+    draw(gl: WebGLRenderingContext, shader: Shader) {
+        this.modelBuffer.draw(gl, shader);
     }
 }
