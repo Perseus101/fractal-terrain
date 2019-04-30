@@ -9,7 +9,10 @@ export class Shader {
     public vPosAttribLoc: number;
     public vNormAttribLoc: number;
 
+    public mMatrixULoc: WebGLUniformLocation;
     public pvmMatrixULoc: WebGLUniformLocation;
+    public pvmMatrix: mat4;
+
     public eyePositionULoc: WebGLUniformLocation;
     public lookAtULoc: WebGLUniformLocation;
     public sunDirectionULoc: WebGLUniformLocation;
@@ -54,7 +57,7 @@ export class Shader {
         // gl.enableVertexAttribArray(vUVAttribLoc); // connect attrib to array
 
         // locate vertex uniforms
-        let mMatrixULoc = gl.getUniformLocation(this.shaderProgram, "umMatrix"); // ptr to mmat
+        this.mMatrixULoc = gl.getUniformLocation(this.shaderProgram, "umMatrix"); // ptr to mmat
         this.pvmMatrixULoc = gl.getUniformLocation(this.shaderProgram, "upvmMatrix"); // ptr to pvmmat
 
         // locate fragment uniforms
@@ -87,12 +90,12 @@ export class Shader {
         var specular = vec3.fromValues(0.1, 0.1, 0.1); // default specular emission
         var shininess = 11; // specular exponent
 
-        var hMatrix = mat4.create(); // handedness matrix
-        var pMatrix = mat4.create(); // projection matrix
-        var vMatrix = mat4.create(); // view matrix
-        var mMatrix = mat4.create(); // model matrix
-        var hpvMatrix = mat4.create(); // hand * proj * view matrices
-        var hpvmMatrix = mat4.create(); // hand * proj * view * model matrices
+        // var hMatrix = mat4.create(); // handedness matrix
+        // var pMatrix = mat4.create(); // projection matrix
+        // var vMatrix = mat4.create(); // view matrix
+        // var mMatrix = mat4.create(); // model matrix
+        // var hpvMatrix = mat4.create(); // hand * proj * view matrices
+        // var hpvmMatrix = mat4.create(); // hand * proj * view * model matrices
 
         // mat4.fromScaling(hMatrix, vec3.fromValues(-1, 1, 1)); // create handedness matrix
         // mat4.perspective(pMatrix, 0.5 * Math.PI, 1, 0.1, 10); // create projection matrix
@@ -101,7 +104,7 @@ export class Shader {
         // mat4.multiply(hpvMatrix, hpvMatrix, vMatrix); // handedness * projection * view
         // mat4.multiply(hpvmMatrix, hpvMatrix, mMatrix); // handedness * projection * view * model
 
-        gl.uniformMatrix4fv(mMatrixULoc, false, mMatrix); // pass in the m matrix
+        // gl.uniformMatrix4fv(this.mMatrixULoc, false, mMatrix); // pass in the m matrix
         // gl.uniformMatrix4fv(this.pvmMatrixULoc, false, hpvmMatrix); // pass in the hpvm matrix
 
         gl.uniform3fv(sunAmbientULoc, sunAmbient); // pass in the sun's ambient emission

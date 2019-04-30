@@ -1,0 +1,46 @@
+import { vec3 } from 'gl-matrix';
+
+const kBuf = new ArrayBuffer(8);
+const kBufAsF64 = new Float64Array(kBuf);
+const kBufAsI32 = new Int32Array(kBuf);
+
+export class RNG {
+    globalSeed: number;
+
+    constructor(seed: number,
+        private gaussianAmplitude: number = 0.3,
+        private expBase: number = 2
+    ) {
+        this.globalSeed = this.hashFloat(seed)
+    }
+
+    hashFloat(n: number) {
+        if (~~n === n) {
+            return ~~n;
+        }
+        kBufAsF64[0] = n;
+        return kBufAsI32[0] ^ kBufAsI32[1];
+    }
+
+    hashCombine(lhs: number, rhs: number) {
+        return lhs * 19 + rhs;
+    }
+
+    seededRandom(vec: vec3) {
+        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, vec[0]), vec[1]), vec[2]);
+        let x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    }
+
+    seededRandomGauss(vec: vec3) {
+        let randA = this.seededRandom(vec);
+        let randB = this.seededRandom(vec3.fromValues(vec[0] + randA, vec[1] + randA, vec[2] + randA));
+        return Math.sqrt(-2 * Math.log(randA)) * Math.cos(2 * Math.PI * randB);
+    }
+
+    expRand(vec: vec3, n: number) {
+        return this.gaussianAmplitude*this.seededRandomGauss(vec) / Math.pow(this.expBase, n);
+    }
+}
+
+export default RNG;

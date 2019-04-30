@@ -1,11 +1,13 @@
 import { vec3, mat4 } from 'gl-matrix';
 import { Shader } from './shaders/shader';
+import { Environment } from './drawable/environment';
 
 export class Camera {
     delta: number;
     rotDelta: number;
     directions: any;
     flashLight: boolean;
+    gravity: boolean;
 
     eye: vec3;
     center: vec3;
@@ -19,7 +21,7 @@ export class Camera {
 
     perspective: mat4;
 
-    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.005, rotDelta: number = 0.005) {
+    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.02, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
         this.lookAt = vec3.create();
@@ -42,6 +44,7 @@ export class Camera {
         this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
+        this.gravity = true;
 
         this.perspective = mat4.create();
         this.createPerspective(gl);
@@ -57,9 +60,9 @@ export class Camera {
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
     }
 
-    feed(gl: WebGLRenderingContext, shader: Shader) {
+    feed(gl: WebGLRenderingContext, shader: Shader, env: Environment) {
         // Update movement delta
-        this.updateMovement();
+        this.updateMovement(env);
 
         let hpvMatrix = mat4.create();
         mat4.lookAt(hpvMatrix, this.eye, this.center, this.up); // create view matrix
@@ -70,6 +73,7 @@ export class Camera {
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
+        shader.pvmMatrix = hpvMatrix;
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
         gl.uniform3fv(shader.lookAtULoc, this.lookAt);
         gl.uniform1f(shader.flashLightOnULoc, this.flashLight ? 1.0 : 0.0);
@@ -111,7 +115,7 @@ export class Camera {
         this.lookAt = lookAt;
     }
 
-    updateMovement() {
+    updateMovement(env: Environment) {
         var lookAt = vec3.create(), viewRight = vec3.create(), temp = vec3.create(); // lookat, right & temp vectors
         lookAt = vec3.normalize(lookAt, vec3.subtract(temp, this.center, this.eye)); // get lookat vector
         viewRight = vec3.normalize(viewRight, vec3.cross(temp, this.up, lookAt)); // get view right vector
@@ -143,7 +147,10 @@ export class Camera {
         }
 
         vec3.add(this.eye, delta, this.eye);
-        vec3.add(this.center, delta, this.center);
+        if(this.gravity) {
+            env.updatePositionGivenCollisions(this.eye);
+        }
+        vec3.add(this.center, lookAt, this.eye);
     }
 
     keyDown(event: KeyboardEvent) {
@@ -174,6 +181,10 @@ export class Camera {
         // F OR T FOR FLASHLIGHT
         else if (event.keyCode == 70 || event.keyCode == 84) {
             this.flashLight = !this.flashLight;
+        }
+        // G for Gravity toggle
+        else if (event.keyCode ==  71) {
+            this.gravity = !this.gravity;
         }
     }
 

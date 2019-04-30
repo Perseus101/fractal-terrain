@@ -2,13 +2,14 @@ import { vec3 } from 'gl-matrix';
 
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
-import { Drawable } from './drawable/drawable';
+import { Environment } from './drawable/environment';
 import { Patch, FractalTree, Flora } from './drawable/fractal';
 import { Camera } from './camera';
+import RNG from './rng';
 
-function render(gl: WebGLRenderingContext, shader: Shader, environment: Drawable, camera: Camera) {
+function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
-    camera.feed(gl, shader);
+    camera.feed(gl, shader, environment);
     environment.draw(gl, shader);
 
     requestAnimationFrame(() => render(gl, shader, environment, camera)); // set up frame render callback
@@ -28,7 +29,7 @@ function main() {
         vec3.fromValues(size, 0, -size),
         vec3.fromValues(-size, 0, size),
         vec3.fromValues(size, 0, size),
-        false
+        new RNG(Math.random())
     );
     let environment = new FractalTree(gl, patch, 0, 1);
     let camera = new Camera(
@@ -56,7 +57,6 @@ function setupCallbacks(gl: WebGLRenderingContext, camera: Camera, canvas: HTMLE
 
         // Check if the canvas is not the same size.
         if (gl.canvas.width !== displayWidth || gl.canvas.height !== displayHeight) {
-            console.log(gl.canvas.width, gl.canvas.height, displayWidth, displayHeight);
             // Make the canvas the same size
             gl.canvas.width = displayWidth;
             gl.canvas.height = displayHeight;
