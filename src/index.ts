@@ -3,7 +3,7 @@ import { vec3 } from 'gl-matrix';
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
 import { Environment } from './drawable/environment';
-import { Patch, FractalNode, Quadrant } from './drawable/fractal';
+import { Patch, FractalNode, Flora, Quadrant } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
@@ -20,6 +20,10 @@ function main() {
     let canvas: any = document.getElementById("canvas");
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
+
+    Flora.treeModel = require('./assets/appleBig.json');
+    // console.log(Flora.treeModel);
+
     let size = 2.5;
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),

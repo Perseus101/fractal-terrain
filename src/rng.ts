@@ -23,13 +23,13 @@ export class RNG {
     }
 
     hashCombine(lhs: number, rhs: number) {
-        return lhs * 19 + rhs;
+        return lhs * 19.0 + rhs;
     }
 
     /* Note, this ignores the y value when seeding */
     seededRandom(vec: vec3) {
-        let seed = this.hashCombine(this.hashCombine(this.globalSeed, vec[0]), vec[2]);
-        let x = Math.sin(seed) * 10000;
+        let seed = this.hashCombine(this.hashCombine(vec[0], this.globalSeed), vec[2]);
+        let x = Math.sin(seed * 1.12) * 9999.0;
         return x - Math.floor(x);
     }
 

@@ -73,6 +73,7 @@ export class Camera {
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
+        shader.pvmMatrix = hpvMatrix;
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
         gl.uniform3fv(shader.lookAtULoc, this.lookAt);
         gl.uniform1f(shader.flashLightOnULoc, this.flashLight ? 1.0 : 0.0);

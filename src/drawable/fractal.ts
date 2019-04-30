@@ -1,5 +1,6 @@
-import { vec3 } from 'gl-matrix';
-import { BufferSet, BufferSetBuilder } from './buffer_set';
+import { vec3, mat4 } from 'gl-matrix';
+import { Drawable } from "./drawable";
+import { BufferSet, ModelBufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
 import RNG from '../rng';
@@ -440,6 +441,7 @@ export class BufferedFractal extends Fractal {
     patch: Patch;
     saved_vertices: number[];
     sqrtSize: number;
+    floraBuffer : ModelBufferSet;
 
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
         super();
@@ -447,9 +449,12 @@ export class BufferedFractal extends Fractal {
         this.finalDepth = depth + layersToRecurse - 1;
 
         let quadNormals: vec3[] = [];
+        this.floraBuffer = new ModelBufferSet(gl, Flora.treeModel);
 
         let builder = new BufferSetBuilder();
-        this.fractalRecurse(builder, quadNormals, patch, depth);
+        this.fractalRecurse(gl, builder, quadNormals, patch, depth, false);
+
+        // console.log(this.floraBuffer.transforms);
 
         for (let i = 0; i < quadNormals.length / 3; i++) {
             let result = getCoord(i);
@@ -467,7 +472,7 @@ export class BufferedFractal extends Fractal {
         this.saved_vertices = builder.vertices;
     }
 
-    fractalRecurse(builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number) {
+    fractalRecurse(gl: WebGLRenderingContext, builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number, barren: boolean) {
         if (n == this.finalDepth) {
             // this adds a square
             builder.vertices.push(patch.bl[0], patch.bl[1], patch.bl[2]);
@@ -492,9 +497,15 @@ export class BufferedFractal extends Fractal {
             builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);
         } else {
             let subPatches = patch.divide(n);
+            let rand = patch.rng.seededRandom(patch.midpoint);
+            // console.log(5/n);
+            if (!barren && rand > 0.999) {
+                barren = true;
+                this.floraBuffer.transforms.push(Flora.getTransform(patch));
+            }
 
             for (let subPatch of subPatches) {
-                this.fractalRecurse(builder, quadNormals, subPatch, n + 1);
+                this.fractalRecurse(gl, builder, quadNormals, subPatch, n + 1, barren);
             }
         }
     }
@@ -523,6 +534,7 @@ export class BufferedFractal extends Fractal {
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
         this.buffers.draw(gl, shader);
+        this.floraBuffer.draw(gl, shader);
     }
 
     getBufferedFractalAt(p: vec3): BufferedFractal {
@@ -555,5 +567,31 @@ export class BufferedFractal extends Fractal {
         let interp = (1-xpp) * left_interp + xpp*right_interp;
 
         return interp;
+    }
+}
+
+export class Flora {
+
+    static treeModel: any;
+
+    static getTransform(patch: Patch) {
+        // Translate the model to a location on the patch
+        let loc = patch.midpoint;
+
+        // Scale the model based on the size of the patch
+        let size = vec3.length(vec3.sub(vec3.create(), patch.bl, patch.tr));
+        // size /= 9.0;
+
+        let mMatrix = mat4.create();
+        // scale
+        mMatrix[0] = size;
+        mMatrix[5] = size;
+        mMatrix[10] = size;
+        // translate
+        mMatrix[12] = loc[0];
+        mMatrix[13] = loc[1];
+        mMatrix[14] = loc[2];
+
+        return mMatrix;
     }
 }
