@@ -4,6 +4,10 @@ import Biome from "./biome";
 export class BiomeContainer {
     constructor(private biomes: Biome[]) {}
 
+    biomeCount(): number {
+        return this.biomes.length;
+    }
+
     createInterpolatedBiome(weights: number[]): Biome {
         if(weights.length !== this.biomes.length) {
             throw new Error("Incorrect biome weight length");

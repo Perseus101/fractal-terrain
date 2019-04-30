@@ -2,7 +2,7 @@ import { vec3 } from 'gl-matrix';
 import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
-import RNG from '../rng';
+import RNG, { PerlinRNG } from '../rng';
 import Biome from '../biome/biome';
 import { BiomeContainer } from '../biome/container';
 
@@ -67,18 +67,12 @@ export class Patch {
     midpoint: vec3;
     rng: RNG;
 
-    biomeWeights: number[];
-    biomes: BiomeContainer;
-
-    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG, biomeWeights: number[], biomes: BiomeContainer) {
+    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG) {
         this.bl = bl;
         this.br = br;
         this.tl = tl;
         this.tr = tr;
         this.rng = rng;
-
-        this.biomeWeights = biomeWeights;
-        this.biomes = biomes;
 
         this.computeMidpoint();
     }
@@ -118,10 +112,10 @@ export class Patch {
         midpoint[1] += this.rng.expRand(midpoint, currentDepth/*, 1, biome.amplitude*/);
 
         return [
-            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng, this.perturbWeights(0, currentDepth, this.bl), this.biomes), //bottom left corner
-            new Patch(midBottom, this.br, midpoint, midRight, this.rng, this.perturbWeights(1, currentDepth, this.br), this.biomes), //bottom right corner
-            new Patch(midLeft, midpoint, this.tl, midTop, this.rng, this.perturbWeights(2, currentDepth, this.tl), this.biomes), //top left corner
-            new Patch(midpoint, midRight, midTop, this.tr, this.rng, this.perturbWeights(3, currentDepth, this.tr), this.biomes) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng), //bottom left corner
+            new Patch(midBottom, this.br, midpoint, midRight, this.rng), //bottom right corner
+            new Patch(midLeft, midpoint, this.tl, midTop, this.rng), //top left corner
+            new Patch(midpoint, midRight, midTop, this.tr, this.rng) //top right corner
         ]
     }
 
@@ -194,47 +188,30 @@ export class Patch {
                 let br = pX;
                 let tl = pY;
                 let tr = pXY;
-                return new Patch(bl, br, tl, tr, this.rng, this.perturbWeights(3, currentDepth, this.tr), this.biomes);
+                return new Patch(bl, br, tl, tr, this.rng);
             }
             case Quadrant.Br: {
                 let br = anchor;
                 let bl = pX;
                 let tr = pY;
                 let tl = pXY;
-                return new Patch(bl, br, tl, tr, this.rng, this.perturbWeights(3, currentDepth, this.tr), this.biomes);
+                return new Patch(bl, br, tl, tr, this.rng);
             }
             case Quadrant.Tl: {
                 let tl = anchor;
                 let tr = pX;
                 let bl = pY;
                 let br = pXY;
-                return new Patch(bl, br, tl, tr, this.rng, this.perturbWeights(3, currentDepth, this.tr), this.biomes);
+                return new Patch(bl, br, tl, tr, this.rng);
             }
             case Quadrant.Tr: {
                 let tr = anchor;
                 let tl = pX;
                 let br = pY;
                 let bl = pXY;
-                return new Patch(bl, br, tl, tr, this.rng, this.perturbWeights(3, currentDepth, this.tr), this.biomes);
+                return new Patch(bl, br, tl, tr, this.rng);
             }
         }
-    }
-
-    perturbWeights(seed: number, n: number, point: vec3): number[] {
-        let weights = [];
-        for (let i = 0; i < this.biomeWeights.length; i++) {
-            let weight = this.biomeWeights[i];
-            let localSeed = this.rng.hashCombine(i, seed);
-            weight += this.rng.expRand(point, n, localSeed, 0.2);
-            if (weight > 1) {
-                weight = 1;
-            }
-            if (weight < 0) {
-                weight = 0;
-            }
-            weights.push(weight);
-        }
-        return weights;
     }
 }
 
@@ -263,6 +240,8 @@ export enum Quadrant {
 
 //This is the tree that either contains more trees, or eventually a BufferedFractal which is a leaf node
 export class FractalNode extends Fractal {
+    static readonly perlin: PerlinRNG = new PerlinRNG();
+
     bl: Fractal;
     br: Fractal;
     tl: Fractal;
@@ -292,17 +271,43 @@ export class FractalNode extends Fractal {
         return this;
     }
 
+    generateBiome(patch): Biome {
+        const scale = 0.005;
+        let x = patch.midpoint[0] / scale;
+        let z = patch.midpoint[2] / scale;
+        let biomeWeights = [];
+        let y = 0.1;
+
+        for(let i = 0; i < this.biomes.biomeCount(); i++) {
+            y += i * 2.8;
+            let val = FractalNode.perlin.noise(x, y, z);
+            if(val < 0) {
+                val = 0.1;
+            }
+            biomeWeights.push(val);
+        }
+        return this.biomes.createInterpolatedBiome(biomeWeights);
+    }
+
     recurseOnce(): FractalNode {
         let subs = this.patch.divide(this.depth);
         if (this.depth == this.layerToBuffer - 1) {
-            if (!this.bl)
-                this.bl = new BufferedFractal(this.gl, this.biomes, subs[0], this.depth + 1, 6);
-            if (!this.br)
-                this.br = new BufferedFractal(this.gl, this.biomes, subs[1], this.depth + 1, 6);
-            if (!this.tl)
-                this.tl = new BufferedFractal(this.gl, this.biomes, subs[2], this.depth + 1, 6);
-            if (!this.tr)
-                this.tr = new BufferedFractal(this.gl, this.biomes, subs[3], this.depth + 1, 6);
+            if (!this.bl) {
+                let biome = this.generateBiome(subs[0]);
+                this.bl = new BufferedFractal(this.gl, biome, subs[0], this.depth + 1, 6);
+            }
+            if (!this.br) {
+                let biome = this.generateBiome(subs[1]);
+                this.br = new BufferedFractal(this.gl, biome, subs[1], this.depth + 1, 6);
+            }
+            if (!this.tl) {
+                let biome = this.generateBiome(subs[2]);
+                this.tl = new BufferedFractal(this.gl, biome, subs[2], this.depth + 1, 6);
+            }
+            if (!this.tr) {
+                let biome = this.generateBiome(subs[3]);
+                this.tr = new BufferedFractal(this.gl, biome, subs[3], this.depth + 1, 6);
+            }
         } else {
             if (!this.bl)
                 this.bl = new FractalNode(this.gl, this.biomes, subs[0], this.depth + 1, this.layerToBuffer, false);
@@ -465,12 +470,12 @@ export class BufferedFractal extends Fractal {
     saved_vertices: number[];
     sqrtSize: number;
 
-    biomes: BiomeContainer
+    biome: Biome
 
-    constructor(gl: WebGLRenderingContext, biomes: BiomeContainer, patch: Patch, depth: number, layersToRecurse: number) {
+    constructor(gl: WebGLRenderingContext, biome: Biome, patch: Patch, depth: number, layersToRecurse: number) {
         super();
 
-        this.biomes = biomes;
+        this.biome = biome;
         this.patch = patch;
         this.finalDepth = depth + layersToRecurse - 1;
 
@@ -516,11 +521,10 @@ export class BufferedFractal extends Fractal {
             // builder.normals.push(normB[0], normB[1], normB[2]);
             // builder.normals.push(normal[0], normal[1], normal[2]);
 
-            let biome = this.biomes.createInterpolatedBiome(patch.biomeWeights);
-            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
-            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
-            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
-            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
+            builder.colors.push(this.biome.color[0], this.biome.color[1], this.biome.color[2]);
+            builder.colors.push(this.biome.color[0], this.biome.color[1], this.biome.color[2]);
+            builder.colors.push(this.biome.color[0], this.biome.color[1], this.biome.color[2]);
+            builder.colors.push(this.biome.color[0], this.biome.color[1], this.biome.color[2]);
 
             let len = builder.vertices.length / 3;
             builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);

@@ -35,8 +35,6 @@ function main() {
         vec3.fromValues(-size, 0, size),
         vec3.fromValues(size, 0, size),
         new RNG(Math.random()),
-        [1, 0, 0],
-        biomes
     );
     let environment = new FractalNode(gl, biomes, patch, 0, 3, true).recurse();
     environment.becomeNewRoot(Quadrant.Bl);
