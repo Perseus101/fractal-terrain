@@ -26,8 +26,9 @@ export class RNG {
         return lhs * 19 + rhs;
     }
 
+    /* Note, this ignores the y value when seeding */
     seededRandom(vec: vec3) {
-        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, vec[0]), vec[1]), vec[2]);
+        let seed = this.hashCombine(this.hashCombine(this.globalSeed, vec[0]), vec[2]);
         let x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
     }

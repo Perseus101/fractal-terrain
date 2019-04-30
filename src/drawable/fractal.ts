@@ -71,20 +71,20 @@ export class Patch {
         this.tl = tl;
         this.tr = tr;
         this.rng = rng;
+
+        this.computeMidpoint();
     }
 
-    computeMidpoint() {
-        let midpoint = vec3.create();
+    private computeMidpoint() {
+        this.midpoint = vec3.create();
 
-        vec3.add(midpoint, this.bl, this.tl);
-        vec3.add(midpoint, midpoint, this.tr);
-        vec3.add(midpoint, midpoint, this.br);
-        vec3.scale(midpoint, midpoint, 1 / 4);
-
-        return midpoint;
+        vec3.add(this.midpoint, this.bl, this.tl);
+        vec3.add(this.midpoint, this.midpoint, this.tr);
+        vec3.add(this.midpoint, this.midpoint, this.br);
+        vec3.scale(this.midpoint, this.midpoint, 1 / 4);
     }
 
-    divide(n: number) {
+    divide(currentDepth: number) {
         let midLeft = vec3.create();
         let midTop = vec3.create();
         let midRight = vec3.create();
@@ -99,13 +99,13 @@ export class Patch {
         vec3.add(midBottom, this.br, this.bl);
         vec3.scale(midBottom, midBottom, 1 / 2);
 
-        let midpoint = this.computeMidpoint();
+        let midpoint = vec3.clone(this.midpoint);
 
-        midLeft[1] += this.rng.expRand(midLeft, n);
-        midTop[1] += this.rng.expRand(midTop, n);
-        midRight[1] += this.rng.expRand(midRight, n);
-        midBottom[1] += this.rng.expRand(midBottom, n);
-        midpoint[1] += this.rng.expRand(midpoint, n);
+        midLeft[1] += this.rng.expRand(midLeft, currentDepth);
+        midTop[1] += this.rng.expRand(midTop, currentDepth);
+        midRight[1] += this.rng.expRand(midRight, currentDepth);
+        midBottom[1] += this.rng.expRand(midBottom, currentDepth);
+        midpoint[1] += this.rng.expRand(midpoint, currentDepth);
 
         return [
             new Patch(this.bl, midBottom, midLeft, midpoint, this.rng), //bottom left corner
@@ -113,6 +113,101 @@ export class Patch {
             new Patch(midLeft, midpoint, this.tl, midTop, this.rng), //top left corner
             new Patch(midpoint, midRight, midTop, this.tr, this.rng) //top right corner
         ]
+    }
+
+    /**
+     * Returns the larger patch enclosing this one, assuming this patch is in the given quadrant
+     * @param quadrantToBe the quadrant that this patch would exist in in the larger patch
+     */
+    undivide(quadrantToBe: Quadrant, currentDepth: number): Patch {
+        let anchor; //the point that doesn't move
+        let pX;     //the point that is grown along the x direction
+        let pY;     //the point that is grown along the y direciton
+        let pXY;    //the point that is grown along the x and y directions
+
+        switch (quadrantToBe) {
+            case Quadrant.Bl: {
+                anchor = vec3.clone(this.bl);
+                pX = vec3.clone(this.br);
+                pY = vec3.clone(this.tl);
+                pXY = vec3.clone(this.tr);
+                break;
+            }
+            case Quadrant.Br: {
+                anchor = vec3.clone(this.br);
+                pX = vec3.clone(this.bl);
+                pY = vec3.clone(this.tr);
+                pXY = vec3.clone(this.tl);
+                break;
+            }
+            case Quadrant.Tl: {
+                anchor = vec3.clone(this.tl);
+                pX = vec3.clone(this.tr);
+                pY = vec3.clone(this.bl);
+                pXY = vec3.clone(this.br);
+                break;
+            }
+            case Quadrant.Tr: {
+                anchor = vec3.clone(this.tr);
+                pX = vec3.clone(this.tl);
+                pY = vec3.clone(this.br);
+                pXY = vec3.clone(this.bl);
+                break;
+            }
+        }
+
+        let dX = vec3.create(); vec3.subtract(dX, pX, anchor);
+        let dY = vec3.create(); vec3.subtract(dY, pY, anchor);
+
+        let oldPX = vec3.clone(pX);
+        let oldPY = vec3.clone(pY);
+        let oldPXY = vec3.clone(pXY);
+
+        vec3.add(pX, pX, dX);
+        vec3.add(pY, pY, dY);
+        vec3.add(pXY, pXY, dX);
+        vec3.add(pXY, pXY, dY);
+
+        //(anchor + newCorner) / 2 = interpolated     and interpolated + displacement = midY
+        //newCorner = 2*(midY - displacement) - anchor
+        pX[1] = 2 * (oldPX[1] - this.rng.expRand(oldPX, currentDepth - 1)) - anchor[1];
+        pY[1] = 2 * (oldPY[1] - this.rng.expRand(oldPY, currentDepth - 1)) - anchor[1];
+
+        //(anchor + pX + pY + pXY)/4 = oldPXY - displacement
+        //pXY = 4*(oldPXY - displacement) - pX - pY - anchor
+        pXY[1] = 4 * (oldPXY[1] - this.rng.expRand(oldPXY, currentDepth - 1)) - pX[1] - pY[1] - anchor[1];
+
+
+        switch (quadrantToBe) {
+            case Quadrant.Bl: {
+                let bl = anchor;
+                let br = pX;
+                let tl = pY;
+                let tr = pXY;
+                return new Patch(bl, br, tl, tr, this.rng);
+            }
+            case Quadrant.Br: {
+                let br = anchor;
+                let bl = pX;
+                let tr = pY;
+                let tl = pXY;
+                return new Patch(bl, br, tl, tr, this.rng);
+            }
+            case Quadrant.Tl: {
+                let tl = anchor;
+                let tr = pX;
+                let bl = pY;
+                let br = pXY;
+                return new Patch(bl, br, tl, tr, this.rng);
+            }
+            case Quadrant.Tr: {
+                let tr = anchor;
+                let tl = pX;
+                let br = pY;
+                let bl = pXY;
+                return new Patch(bl, br, tl, tr, this.rng);
+            }
+        }
     }
 }
 
@@ -133,31 +228,91 @@ abstract class Fractal implements Environment {
     }
 }
 
+export enum Quadrant {
+    Bl,
+    Br,
+    Tl,
+    Tr,
+}
+
 //This is the tree that either contains more trees, or eventually a BufferedFractal which is a leaf node
-export class FractalTree extends Fractal {
+export class FractalNode extends Fractal {
     bl: Fractal;
     br: Fractal;
     tl: Fractal;
     tr: Fractal;
-    midpoint: vec3;
 
-    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersUntilBuffering: number) {
+    constructor(private gl: WebGLRenderingContext, public patch: Patch, private depth: number, private layerToBuffer: number) {
         super();
+    }
 
-        this.midpoint = patch.computeMidpoint();
-
-        let subs = patch.divide(depth);
-        if (layersUntilBuffering == 0) {
-            this.bl = new BufferedFractal(gl, subs[0], depth + 1, 8);
-            this.br = new BufferedFractal(gl, subs[1], depth + 1, 8);
-            this.tl = new BufferedFractal(gl, subs[2], depth + 1, 8);
-            this.tr = new BufferedFractal(gl, subs[3], depth + 1, 8);
+    recurse(): FractalNode {
+        let subs = this.patch.divide(this.depth);
+        if (this.depth == this.layerToBuffer - 1) {
+            if (!this.bl)
+                this.bl = new BufferedFractal(this.gl, subs[0], this.depth + 1, 8);
+            if (!this.br)
+                this.br = new BufferedFractal(this.gl, subs[1], this.depth + 1, 8);
+            if (!this.tl)
+                this.tl = new BufferedFractal(this.gl, subs[2], this.depth + 1, 8);
+            if (!this.tr)
+                this.tr = new BufferedFractal(this.gl, subs[3], this.depth + 1, 8);
         } else {
-            this.bl = new FractalTree(gl, subs[0], depth + 1, layersUntilBuffering - 1);
-            this.br = new FractalTree(gl, subs[1], depth + 1, layersUntilBuffering - 1);
-            this.tl = new FractalTree(gl, subs[2], depth + 1, layersUntilBuffering - 1);
-            this.tr = new FractalTree(gl, subs[3], depth + 1, layersUntilBuffering - 1);
+            if (!this.bl)
+                this.bl = new FractalNode(this.gl, subs[0], this.depth + 1, this.layerToBuffer).recurse();
+            if (!this.br)
+                this.br = new FractalNode(this.gl, subs[1], this.depth + 1, this.layerToBuffer).recurse();
+            if (!this.tl)
+                this.tl = new FractalNode(this.gl, subs[2], this.depth + 1, this.layerToBuffer).recurse();
+            if (!this.tr)
+                this.tr = new FractalNode(this.gl, subs[3], this.depth + 1, this.layerToBuffer).recurse();
         }
+        return this;
+    }
+
+    /**
+     * Turns this current node into the newer root node for the whole tree, and puts the current tree into the specified quadrant.
+     * @param quadrantToBe The quadrant that this existing tree will become.
+     */
+    becomeNewRoot(quadrantToBe: Quadrant) {
+        let clone = this.clone();
+        this.bl = undefined;
+        this.br = undefined;
+        this.tl = undefined;
+        this.tr = undefined;
+        switch(quadrantToBe) {
+            case Quadrant.Bl: {
+                this.bl = clone;
+                break;
+            }
+            case Quadrant.Br: {
+                this.br = clone;
+                break;
+            }
+            case Quadrant.Tl: {
+                this.tl = clone;
+                break;
+            }
+            case Quadrant.Tr: {
+                this.tr = clone;
+                break;
+            }
+        }
+        this.depth -= 1;
+        this.patch = this.patch.undivide(quadrantToBe, clone.depth);
+        this.recurse();
+    }
+
+    /**
+     * Performs a shallow clone
+     */
+    clone(): FractalNode {
+        let clone = new FractalNode(this.gl, this.patch, this.depth, this.layerToBuffer);
+        clone.bl = this.bl;
+        clone.br = this.br;
+        clone.tl = this.tl;
+        clone.tr = this.tr;
+        return clone;
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
@@ -169,19 +324,21 @@ export class FractalTree extends Fractal {
 
     getBufferedFractalAt(p: vec3): BufferedFractal {
         let fractal;
-        if (p[0] > this.midpoint[0]) {
-            if (p[2] > this.midpoint[2]) {
+        if (p[0] > this.patch.midpoint[0]) {
+            if (p[2] > this.patch.midpoint[2]) {
                 fractal = this.tr;
             } else {
                 fractal = this.br;
             }
         } else {
-            if (p[2] > this.midpoint[2]) {
+            if (p[2] > this.patch.midpoint[2]) {
                 fractal = this.tl;
             } else {
                 fractal = this.bl;
             }
         }
+        if (!fractal)
+            throw "Error, current position in an unloaded fractal quadrant";
         return fractal.getBufferedFractalAt(p);
     }
 
@@ -201,7 +358,6 @@ export class BufferedFractal extends Fractal {
 
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
         super();
-
         this.patch = patch;
         this.finalDepth = depth + layersToRecurse - 1;
 

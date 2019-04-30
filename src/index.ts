@@ -3,7 +3,7 @@ import { vec3 } from 'gl-matrix';
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
 import { Environment } from './drawable/environment';
-import { Patch, FractalTree } from './drawable/fractal';
+import { Patch, FractalNode, Quadrant } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
@@ -19,7 +19,7 @@ function main() {
     let canvas: any = document.getElementById("canvas");
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
-    let size = 5;
+    let size = 2.5;
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
@@ -27,7 +27,9 @@ function main() {
         vec3.fromValues(size, 0, size),
         new RNG(Math.random())
     );
-    let environment = new FractalTree(gl, patch, 0, 1);
+    let environment = new FractalNode(gl, patch, 0, 1).recurse();
+    environment.becomeNewRoot(Quadrant.Bl);
+    (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
         gl,
         vec3.fromValues(0.5, 0.5, -0.5), // Eye
