@@ -29,7 +29,7 @@ function main() {
     Flora.rMatrix[9] = -1 * Math.sin(angle);
     Flora.rMatrix[10] = Math.cos(angle);
 
-    let size = 2.5;
+    let size = 5;
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
@@ -37,8 +37,17 @@ function main() {
         vec3.fromValues(size, 0, size),
         new RNG(Math.random())
     );
-    let environment = new FractalNode(gl, patch, 0, 3, true).recurse();
-    environment.becomeNewRoot(Quadrant.Bl);
+    let policies = {
+        policyList: [
+            { from: undefined, to: 5, bufferAt: 2 },
+            { from: 5, to: 50, bufferAt: -5 },
+            { from: 50, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
+        ],
+        newNodeCutoff: 50
+    };
+    let environment = new FractalNode(gl, patch, 0, policies, true)
+    environment.expandAndPruneTree(vec3.fromValues(0, 0, 0));
+    // environment.becomeNewRoot(Quadrant.Bl);
     (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
         gl,
