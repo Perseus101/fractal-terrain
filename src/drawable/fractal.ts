@@ -564,6 +564,7 @@ export class BufferedFractal extends Fractal {
 export class Flora {
 
     static treeModel: any;
+    static rMatrix: mat4;
 
     static getTransform(patch: Patch) {
         // Translate the model to a location on the patch
@@ -571,7 +572,7 @@ export class Flora {
 
         // Scale the model based on the size of the patch
         let size = vec3.length(vec3.sub(vec3.create(), patch.bl, patch.tr));
-        // size /= 9.0;
+        size /= 20.0;
 
         let mMatrix = mat4.create();
         // scale
@@ -583,6 +584,6 @@ export class Flora {
         mMatrix[13] = loc[1];
         mMatrix[14] = loc[2];
 
-        return mMatrix;
+        return mat4.multiply(mat4.create(), mMatrix, Flora.rMatrix);
     }
 }
