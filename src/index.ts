@@ -1,4 +1,4 @@
-import { vec3 } from 'gl-matrix';
+import { vec3, mat4 } from 'gl-matrix';
 
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
@@ -21,10 +21,15 @@ function main() {
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
 
-    Flora.treeModel = require('./assets/appleBig.json');
-    // console.log(Flora.treeModel);
+    Flora.treeModel = require('./assets/tree.json');
+    Flora.rMatrix = mat4.create();
+    let angle = Math.PI*1.5;
+    Flora.rMatrix[5] = Math.cos(angle);
+    Flora.rMatrix[6] = Math.sin(angle);
+    Flora.rMatrix[9] = -1 * Math.sin(angle);
+    Flora.rMatrix[10] = Math.cos(angle);
 
-    let size = 2.5;
+    let size = 5;
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
@@ -34,7 +39,7 @@ function main() {
     );
     let policies = {
         policyList: [
-            { from: undefined, to: 5, bufferAt: 1 },
+            { from: undefined, to: 5, bufferAt: 2 },
             { from: 5, to: 50, bufferAt: -5 },
             { from: 50, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
         ],
