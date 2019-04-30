@@ -3,7 +3,7 @@ import { vec3 } from 'gl-matrix';
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
 import { Environment } from './drawable/environment';
-import { Patch, FractalTree } from './drawable/fractal';
+import { Patch, FractalNode, Quadrant } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
@@ -13,6 +13,7 @@ import BiomeContainer from './biome/container';
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
     camera.feed(gl, shader, environment);
+    (environment as FractalNode).expandAndPruneTree(camera.getPlayerPosition());
     environment.draw(gl, shader);
 
     requestAnimationFrame(() => render(gl, shader, environment, camera)); // set up frame render callback
@@ -22,7 +23,7 @@ function main() {
     let canvas: any = document.getElementById("canvas");
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
-    let size = 5;
+    let size = 2.5;
     let biomes = new BiomeContainer([
         new Biome(vec3.fromValues(1, 1, 1), 1),
         new Biome(vec3.fromValues(0.2, 1, 0.2), 0.2),
@@ -37,7 +38,9 @@ function main() {
         [1, 0, 0],
         biomes
     );
-    let environment = new FractalTree(gl, biomes, patch, 0, 1);
+    let environment = new FractalNode(gl, biomes, patch, 0, 3, true).recurse();
+    environment.becomeNewRoot(Quadrant.Bl);
+    (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
         gl,
         vec3.fromValues(0.5, 0.5, -0.5), // Eye

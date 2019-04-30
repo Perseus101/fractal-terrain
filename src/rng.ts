@@ -24,7 +24,7 @@ export class RNG {
     }
 
     seededRandom(vec: vec3, localSeed: number) {
-        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, localSeed), vec[0]), vec[1]), vec[2]);
+        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, localSeed), vec[0]), vec[2]);
         let x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
     }

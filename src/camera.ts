@@ -152,6 +152,10 @@ export class Camera {
         vec3.add(this.center, lookAt, this.eye);
     }
 
+    getPlayerPosition(): vec3 {
+        return this.eye;
+    }
+
     keyDown(event: KeyboardEvent) {
         // PRESS LEFT ARROW OR 'A' KEY
         if (event.keyCode == 37 || event.keyCode == 65 ) {
