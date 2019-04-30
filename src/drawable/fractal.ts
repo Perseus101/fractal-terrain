@@ -298,33 +298,34 @@ export class FractalNode extends Fractal {
         let despawnCutoff = 6;
         if (this.isRoot) {
             if (Math.abs(playerPosition[0] - this.patch.bl[0]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.bl, playerPosition) < vec3.squaredDistance(this.patch.tl, playerPosition))
+                if (xzSquaredDistance(this.patch.bl, playerPosition) < xzSquaredDistance(this.patch.tl, playerPosition))
                     this.becomeNewRoot(Quadrant.Tr);
                 else
                     this.becomeNewRoot(Quadrant.Br);
             }
             if (Math.abs(playerPosition[0] - this.patch.br[0]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.br, playerPosition) < vec3.squaredDistance(this.patch.tr, playerPosition))
+                if (xzSquaredDistance(this.patch.br, playerPosition) < xzSquaredDistance(this.patch.tr, playerPosition))
                     this.becomeNewRoot(Quadrant.Tl);
                 else
                     this.becomeNewRoot(Quadrant.Bl);
             }
             if (Math.abs(playerPosition[2] - this.patch.tl[2]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.tl, playerPosition) < vec3.squaredDistance(this.patch.tr, playerPosition))
+                if (xzSquaredDistance(this.patch.tl, playerPosition) < xzSquaredDistance(this.patch.tr, playerPosition))
                     this.becomeNewRoot(Quadrant.Br);
                 else
                     this.becomeNewRoot(Quadrant.Bl);
             }
             if (Math.abs(playerPosition[2] - this.patch.bl[2]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.bl, playerPosition) < vec3.squaredDistance(this.patch.br, playerPosition))
+                if (xzSquaredDistance(this.patch.bl, playerPosition) < xzSquaredDistance(this.patch.br, playerPosition))
                     this.becomeNewRoot(Quadrant.Tr);
                 else
                     this.becomeNewRoot(Quadrant.Tl);
             }
         }
 
-        let circumscribed = vec3.distance(this.patch.bl, this.patch.br) * Math.sqrt(2);
-        if (vec3.squaredDistance(this.patch.midpoint, playerPosition) < Math.pow(renderCutoff + circumscribed, 2)) {
+        let circumscribed = xzDistance(this.patch.bl, this.patch.br) * Math.sqrt(2);
+        let sqDist = xzSquaredDistance(this.patch.midpoint, playerPosition);
+        if (sqDist < Math.pow(renderCutoff + circumscribed, 2)) {
             this.recurseOnceIfNeeded();
             if (this.bl instanceof FractalNode)
                 this.bl.expandAndPruneTree(playerPosition);
@@ -334,7 +335,7 @@ export class FractalNode extends Fractal {
                 this.tl.expandAndPruneTree(playerPosition);
             if (this.tr instanceof FractalNode)
                 this.tr.expandAndPruneTree(playerPosition);
-        } else if (vec3.squaredDistance(this.patch.midpoint, playerPosition) > Math.pow(despawnCutoff + circumscribed, 2)) {
+        } else if (sqDist > Math.pow(despawnCutoff + circumscribed, 2)) {
             this.bl = undefined;
             this.br = undefined;
             this.tl = undefined;
@@ -421,6 +422,14 @@ export class FractalNode extends Fractal {
     getYAt(p: vec3): number {
         return this.getBufferedFractalAt(p).getYAt(p);
     }
+}
+
+function xzSquaredDistance(a: vec3, b: vec3): number {
+    return (a[0] - b[0]) * (a[0] - b[0]) + (a[2] - b[2]) * (a[2] - b[2]);
+}
+
+function xzDistance(a: vec3, b: vec3): number {
+    return Math.sqrt(xzSquaredDistance(a, b));
 }
 
 //This is a leaf of a fractal tree, and actually contains buffer data that can be drawn
