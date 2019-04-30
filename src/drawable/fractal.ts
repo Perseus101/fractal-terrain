@@ -3,6 +3,8 @@ import { BufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
 import RNG from '../rng';
+import Biome from '../biome/biome';
+import { BiomeContainer } from '../biome/container';
 
 function reverse(binary: number, length: number) {
     let result = 0;
@@ -65,12 +67,18 @@ export class Patch {
     midpoint: vec3;
     rng: RNG;
 
-    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG) {
+    biomeWeights: number[];
+    biomes: BiomeContainer;
+
+    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG, biomeWeights: number[], biomes: BiomeContainer) {
         this.bl = bl;
         this.br = br;
         this.tl = tl;
         this.tr = tr;
         this.rng = rng;
+
+        this.biomeWeights = biomeWeights;
+        this.biomes = biomes;
     }
 
     computeMidpoint() {
@@ -101,21 +109,39 @@ export class Patch {
 
         let midpoint = this.computeMidpoint();
 
-        midLeft[1] += this.rng.expRand(midLeft, n);
-        midTop[1] += this.rng.expRand(midTop, n);
-        midRight[1] += this.rng.expRand(midRight, n);
-        midBottom[1] += this.rng.expRand(midBottom, n);
-        midpoint[1] += this.rng.expRand(midpoint, n);
+        // let biome = this.biomes.createInterpolatedBiome(this.biomeWeights);
+
+        midLeft[1] += this.rng.expRand(midLeft, n/*, 1, biome.amplitude*/);
+        midTop[1] += this.rng.expRand(midTop, n/*, 1, biome.amplitude*/);
+        midRight[1] += this.rng.expRand(midRight, n/*, 1, biome.amplitude*/);
+        midBottom[1] += this.rng.expRand(midBottom, n/*, 1, biome.amplitude*/);
+        midpoint[1] += this.rng.expRand(midpoint, n/*, 1, biome.amplitude*/);
 
         return [
-            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng), //bottom left corner
-            new Patch(midBottom, this.br, midpoint, midRight, this.rng), //bottom right corner
-            new Patch(midLeft, midpoint, this.tl, midTop, this.rng), //top left corner
-            new Patch(midpoint, midRight, midTop, this.tr, this.rng) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng, this.perturbWeights(0, n, this.bl), this.biomes), //bottom left corner
+            new Patch(midBottom, this.br, midpoint, midRight, this.rng, this.perturbWeights(1, n, this.br), this.biomes), //bottom right corner
+            new Patch(midLeft, midpoint, this.tl, midTop, this.rng, this.perturbWeights(2, n, this.tl), this.biomes), //top left corner
+            new Patch(midpoint, midRight, midTop, this.tr, this.rng, this.perturbWeights(3, n, this.tr), this.biomes) //top right corner
         ]
     }
-}
 
+    perturbWeights(seed: number, n: number, point: vec3): number[] {
+        let weights = [];
+        for (let i = 0; i < this.biomeWeights.length; i++) {
+            let weight = this.biomeWeights[i];
+            let localSeed = this.rng.hashCombine(i, seed);
+            weight += this.rng.expRand(point, n, localSeed, 0.2);
+            if (weight > 1) {
+                weight = 1;
+            }
+            if (weight < 0) {
+                weight = 0;
+            }
+            weights.push(weight);
+        }
+        return weights;
+    }
+}
 abstract class Fractal implements Environment {
     abstract getBufferedFractalAt(p: vec3): BufferedFractal;
     abstract getYAt(p: vec3): number;
@@ -123,7 +149,6 @@ abstract class Fractal implements Environment {
 
     updatePositionGivenCollisions(pos: vec3): boolean {
         let newY = this.getYAt(pos);
-        // console.log(pos[1], newY);
         if (newY != pos[1]) {
             pos[1] = newY + 0.1;
             return true;
@@ -141,22 +166,22 @@ export class FractalTree extends Fractal {
     tr: Fractal;
     midpoint: vec3;
 
-    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersUntilBuffering: number) {
+    constructor(gl: WebGLRenderingContext, biomes: BiomeContainer, patch: Patch, depth: number, layersUntilBuffering: number) {
         super();
 
         this.midpoint = patch.computeMidpoint();
 
         let subs = patch.divide(depth);
         if (layersUntilBuffering == 0) {
-            this.bl = new BufferedFractal(gl, subs[0], depth + 1, 8);
-            this.br = new BufferedFractal(gl, subs[1], depth + 1, 8);
-            this.tl = new BufferedFractal(gl, subs[2], depth + 1, 8);
-            this.tr = new BufferedFractal(gl, subs[3], depth + 1, 8);
+            this.bl = new BufferedFractal(gl, biomes, subs[0], depth + 1, 8);
+            this.br = new BufferedFractal(gl, biomes, subs[1], depth + 1, 8);
+            this.tl = new BufferedFractal(gl, biomes, subs[2], depth + 1, 8);
+            this.tr = new BufferedFractal(gl, biomes, subs[3], depth + 1, 8);
         } else {
-            this.bl = new FractalTree(gl, subs[0], depth + 1, layersUntilBuffering - 1);
-            this.br = new FractalTree(gl, subs[1], depth + 1, layersUntilBuffering - 1);
-            this.tl = new FractalTree(gl, subs[2], depth + 1, layersUntilBuffering - 1);
-            this.tr = new FractalTree(gl, subs[3], depth + 1, layersUntilBuffering - 1);
+            this.bl = new FractalTree(gl, biomes, subs[0], depth + 1, layersUntilBuffering - 1);
+            this.br = new FractalTree(gl, biomes, subs[1], depth + 1, layersUntilBuffering - 1);
+            this.tl = new FractalTree(gl, biomes, subs[2], depth + 1, layersUntilBuffering - 1);
+            this.tr = new FractalTree(gl, biomes, subs[3], depth + 1, layersUntilBuffering - 1);
         }
     }
 
@@ -199,9 +224,12 @@ export class BufferedFractal extends Fractal {
     saved_vertices: number[];
     sqrtSize: number;
 
-    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
+    biomes: BiomeContainer
+
+    constructor(gl: WebGLRenderingContext, biomes: BiomeContainer, patch: Patch, depth: number, layersToRecurse: number) {
         super();
 
+        this.biomes = biomes;
         this.patch = patch;
         this.finalDepth = depth + layersToRecurse - 1;
 
@@ -246,6 +274,12 @@ export class BufferedFractal extends Fractal {
             // builder.normals.push(normal[0], normal[1], normal[2]);
             // builder.normals.push(normB[0], normB[1], normB[2]);
             // builder.normals.push(normal[0], normal[1], normal[2]);
+
+            let biome = this.biomes.createInterpolatedBiome(patch.biomeWeights);
+            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
+            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
+            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
+            builder.colors.push(biome.color[0], biome.color[1], biome.color[2]);
 
             let len = builder.vertices.length / 3;
             builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);

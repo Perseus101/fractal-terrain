@@ -8,6 +8,9 @@ export class Shader {
 
     public vPosAttribLoc: number;
     public vNormAttribLoc: number;
+    public vColorAttribLoc: number;
+
+    public diffuseULoc: WebGLUniformLocation;
 
     public pvmMatrixULoc: WebGLUniformLocation;
     public eyePositionULoc: WebGLUniformLocation;
@@ -50,8 +53,8 @@ export class Shader {
         gl.enableVertexAttribArray(this.vPosAttribLoc); // connect attrib to array
         this.vNormAttribLoc = gl.getAttribLocation(this.shaderProgram, "aVertexNormal"); // ptr to vertex normal attrib
         gl.enableVertexAttribArray(this.vNormAttribLoc); // connect attrib to array
-        // let vUVAttribLoc = gl.getAttribLocation(this.shaderProgram, "aVertexUV"); // ptr to vertex UV attrib
-        // gl.enableVertexAttribArray(vUVAttribLoc); // connect attrib to array
+        this.vColorAttribLoc = gl.getAttribLocation(this.shaderProgram, "aVertexColor"); // ptr to vertex normal attrib
+        gl.enableVertexAttribArray(this.vColorAttribLoc); // connect attrib to array
 
         // locate vertex uniforms
         let mMatrixULoc = gl.getUniformLocation(this.shaderProgram, "umMatrix"); // ptr to mmat
@@ -68,7 +71,7 @@ export class Shader {
         let moonSpecularULoc = gl.getUniformLocation(this.shaderProgram, "uMoonSpecular"); // ptr to light specular
         this.sunDirectionULoc = gl.getUniformLocation(this.shaderProgram, "uSunDirection"); // ptr to sun direction
         let ambientULoc = gl.getUniformLocation(this.shaderProgram, "uAmbient"); // ptr to ambient
-        let diffuseULoc = gl.getUniformLocation(this.shaderProgram, "uDiffuse"); // ptr to diffuse
+        this.diffuseULoc = gl.getUniformLocation(this.shaderProgram, "uDiffuse"); // ptr to diffuse
         let specularULoc = gl.getUniformLocation(this.shaderProgram, "uSpecular"); // ptr to specular
         let shininessULoc = gl.getUniformLocation(this.shaderProgram, "uShininess"); // ptr to shininess
 
@@ -112,7 +115,7 @@ export class Shader {
         gl.uniform3fv(moonSpecularULoc, moonSpecular); // pass in the moon's specular emission
 
         gl.uniform3fv(ambientULoc, ambient); // pass in the ambient reflectivity
-        gl.uniform3fv(diffuseULoc, diffuse); // pass in the diffuse reflectivity
+        gl.uniform3fv(this.diffuseULoc, diffuse); // pass in the diffuse reflectivity
         gl.uniform3fv(specularULoc, specular); // pass in the specular reflectivity
         gl.uniform1f(shininessULoc, shininess); // pass in the specular exponent
     }

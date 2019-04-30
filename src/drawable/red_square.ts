@@ -20,12 +20,19 @@ export class RedSquare implements Drawable {
             [ 0.0, 0.0, -1.0 ],
         ];
 
+        let colors = [
+            [ 1.0, 1.0, 1.0 ],
+            [ 1.0, 1.0, 1.0 ],
+            [ 1.0, 1.0, 1.0 ],
+            [ 1.0, 1.0, 1.0 ],
+        ];
+
         let triangles =  [
             [ 0, 1, 2 ],
             [ 2, 3, 0 ],
         ];
 
-        this.buffers = new BufferSet(gl, vertices, normals, triangles);
+        this.buffers = new BufferSet(gl, vertices, normals, colors, triangles);
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {

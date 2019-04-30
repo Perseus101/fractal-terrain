@@ -7,6 +7,9 @@ import { Patch, FractalTree } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
+import Biome from './biome/biome';
+import BiomeContainer from './biome/container';
+
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
     camera.feed(gl, shader, environment);
@@ -20,14 +23,21 @@ function main() {
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
     let size = 5;
+    let biomes = new BiomeContainer([
+        new Biome(vec3.fromValues(1, 1, 1), 1),
+        new Biome(vec3.fromValues(0.2, 1, 0.2), 0.2),
+        new Biome(vec3.fromValues(1, 1, 0.88), 0.1)
+    ]);
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
         vec3.fromValues(-size, 0, size),
         vec3.fromValues(size, 0, size),
-        new RNG(Math.random())
+        new RNG(Math.random()),
+        [1, 0, 0],
+        biomes
     );
-    let environment = new FractalTree(gl, patch, 0, 1);
+    let environment = new FractalTree(gl, biomes, patch, 0, 1);
     let camera = new Camera(
         gl,
         vec3.fromValues(0.5, 0.5, -0.5), // Eye

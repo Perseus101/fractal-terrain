@@ -7,10 +7,7 @@ const kBufAsI32 = new Int32Array(kBuf);
 export class RNG {
     globalSeed: number;
 
-    constructor(seed: number,
-        private gaussianAmplitude: number = 0.3,
-        private expBase: number = 2
-    ) {
+    constructor(seed: number) {
         this.globalSeed = this.hashFloat(seed)
     }
 
@@ -26,20 +23,20 @@ export class RNG {
         return lhs * 19 + rhs;
     }
 
-    seededRandom(vec: vec3) {
-        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, vec[0]), vec[1]), vec[2]);
+    seededRandom(vec: vec3, localSeed: number) {
+        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, localSeed), vec[0]), vec[1]), vec[2]);
         let x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
     }
 
-    seededRandomGauss(vec: vec3) {
-        let randA = this.seededRandom(vec);
-        let randB = this.seededRandom(vec3.fromValues(vec[0] + randA, vec[1] + randA, vec[2] + randA));
+    seededRandomGauss(vec: vec3, localSeed: number) {
+        let randA = this.seededRandom(vec, localSeed);
+        let randB = this.seededRandom(vec3.fromValues(vec[0] + randA, vec[1] + randA, vec[2] + randA), localSeed);
         return Math.sqrt(-2 * Math.log(randA)) * Math.cos(2 * Math.PI * randB);
     }
 
-    expRand(vec: vec3, n: number) {
-        return this.gaussianAmplitude*this.seededRandomGauss(vec) / Math.pow(this.expBase, n);
+    expRand(vec: vec3, n: number, localSeed=1, gaussianAmplitude = 1.0) {
+        return gaussianAmplitude*this.seededRandomGauss(vec, localSeed) / Math.pow(2, n);
     }
 }
 
