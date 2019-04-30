@@ -580,7 +580,10 @@ export class Flora {
         let loc = patch.midpoint;
 
         // Scale the model based on the size of the patch
-        let size = vec3.length(vec3.sub(vec3.create(), patch.bl, patch.tr));
+        let dif = vec3.create();
+        vec3.sub(dif, patch.bl, patch.tr);
+        dif[1] = 0;
+        let size = vec3.length(dif);
         size /= 20.0;
 
         let mMatrix = mat4.create();
