@@ -32,7 +32,12 @@ function main() {
         vec3.fromValues(size, 0, size),
         new RNG(Math.random())
     );
-    let environment = new FractalNode(gl, patch, 0, 3, true).recurse();
+    let policyList = [
+        { from: Number.MIN_SAFE_INTEGER, to: 1, bufferAt: 3 },
+        { from: 1, to: 2, bufferAt: 2 },
+        { from: 10, to: Number.MAX_SAFE_INTEGER, bufferAt: undefined }, //undefined indicates it should despawn at this distance
+    ];
+    let environment = new FractalNode(gl, patch, 0, policyList, true).recurse();
     environment.becomeNewRoot(Quadrant.Bl);
     (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
