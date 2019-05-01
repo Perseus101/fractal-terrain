@@ -49,9 +49,20 @@ export class ModelBufferSet extends BufferSet {
         super(gl,
             model.vertices,
             model.normals,
-            ModelBufferSet.defaultColor(model.vertices.length),
+            ModelBufferSet.treeColor(61, model.vertices.length),
             model.triangles);
         this.transforms = [];
+    }
+
+    static treeColor(leafCutoff: number, l: number): number[] {
+        let colors = [];
+        for(let i = 0; i < leafCutoff; i++) {
+            colors.push(0.75, 0.5, 0.25);
+        }
+        for(let i = leafCutoff; i < l; i++) {
+            colors.push(0.3, 0.8, 0.25);
+        }
+        return colors;
     }
 
     static defaultColor(l: number): number[] {
