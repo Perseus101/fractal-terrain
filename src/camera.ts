@@ -29,6 +29,7 @@ export class Camera {
         this.up = up;
         this.sun = vec3.clone(up);
         this.origin = vec3.fromValues(0,0,0);
+        vec3.rotateX(this.sun, this.sun, this.origin, Math.PI/-2);
         this.delta = delta;
         this.rotDelta = rotDelta;
         this.directions = {
@@ -70,6 +71,7 @@ export class Camera {
         // rotate the sun around the world
         vec3.rotateX(this.sun, this.sun, this.origin, 0.001);
         gl.uniform3fv(shader.sunDirectionULoc, this.sun);
+        // console.log(this.sun[1] > 0);
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);

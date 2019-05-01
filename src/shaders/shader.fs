@@ -34,10 +34,16 @@ varying vec3 vVertexNormal; // normal of fragment
 void main(void) {
 
     // ambient term
-    vec3 ambient = uAmbient*uSunAmbient;
+    //vec3 ambient = uAmbient*uSunAmbient;
 
     // sunset
-    vec3 modifiedSun = vec3(0.4 + abs(uSunDirection.y) * 0.6, max(0.5, abs(uSunDirection.y)), max(0.5, min(0.92, abs(uSunDirection.y))));
+    //vec3 modifiedSun = vec3(0.4 + abs(uSunDirection.y) * 0.6, max(0.5, abs(uSunDirection.y)), max(0.5, min(0.92, abs(uSunDirection.y))));
+    float sunLevel = max(0.0, uSunDirection.y);
+    sunLevel = min(1.0,pow(5.0, sunLevel) - 1.0);
+    vec3 modifiedSun = vec3(sunLevel, sunLevel, sunLevel);
+
+    // accurate sun ambient
+    vec3 ambient = uAmbient * sunLevel * 2.0;
 
     // sun diffuse
     vec3 normal = normalize(vVertexNormal);
