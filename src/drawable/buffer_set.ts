@@ -49,7 +49,7 @@ export class ModelBufferSet extends BufferSet {
         super(gl,
             model.vertices,
             model.normals,
-            ModelBufferSet.treeColor(61, model.vertices.length),
+            ModelBufferSet.treeColor(70, model.vertices.length),
             model.triangles);
         this.transforms = [];
     }
