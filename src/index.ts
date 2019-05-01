@@ -8,7 +8,7 @@ import { Camera } from './camera';
 import RNG from './rng';
 
 import Biome from './biome/biome';
-import BiomeContainer from './biome/container';
+import { BiomeContainer } from './biome/container';
 
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
@@ -29,12 +29,13 @@ function main() {
         new Biome(vec3.fromValues(0.2, 1, 0.2), 0.2),
         new Biome(vec3.fromValues(1, 1, 0.88), 0.1)
     ]);
-    let patch = new Patch(
-        vec3.fromValues(-size, 0, -size),
-        vec3.fromValues(size, 0, -size),
-        vec3.fromValues(-size, 0, size),
-        vec3.fromValues(size, 0, size),
+    let bl = vec3.fromValues(-size, 0, -size)
+    let br = vec3.fromValues(size, 0, -size)
+    let tl = vec3.fromValues(-size, 0, size)
+    let tr = vec3.fromValues(size, 0, size)
+    let patch = new Patch(bl, br, tl, tr,
         new RNG(Math.random()),
+        biomes
     );
     let environment = new FractalNode(gl, biomes, patch, 0, 3, true).recurse();
     environment.becomeNewRoot(Quadrant.Bl);
