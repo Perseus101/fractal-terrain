@@ -7,6 +7,9 @@ import { Patch, FractalNode, Flora, Quadrant } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
+import Biome from './biome/biome';
+import { BiomeContainer } from './biome/container';
+
 function render(gl: WebGLRenderingContext, shader: Shader, environment: Environment, camera: Camera) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
     camera.feed(gl, shader, environment);
@@ -21,6 +24,12 @@ function main() {
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
 
+    let biomes = new BiomeContainer([
+        new Biome(vec3.fromValues(1, 1, 1), 1),
+        new Biome(vec3.fromValues(0.2, 1, 0.2), 0.2),
+        new Biome(vec3.fromValues(1, 1, 0.88), 0.1)
+    ]);
+
     Flora.treeModel = require('./assets/tree.json');
     Flora.rMatrix = mat4.create();
     let angle = Math.PI*1.5;
@@ -29,21 +38,22 @@ function main() {
     Flora.rMatrix[9] = -1 * Math.sin(angle);
     Flora.rMatrix[10] = Math.cos(angle);
 
-    let size = 5;
+    let size = 5 * Math.pow(2, 10);
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
         vec3.fromValues(-size, 0, size),
         vec3.fromValues(size, 0, size),
-        new RNG(Math.random())
+        new RNG(Math.random()),
+        biomes
     );
     let policies = {
         policyList: [
-            { from: undefined, to: 25, bufferAt: 2 },
-            { from: 25, to: 100, bufferAt: -10 },
-            { from: 100, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
+            { from: undefined, to: 25, bufferAt: 12 },
+            { from: 25, to: 200, bufferAt: -100 },
+            { from: 200, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
         ],
-        newNodeCutoff: 50
+        newNodeCutoff: 200
     };
     let environment = new FractalNode(gl, patch, 0, policies, true)
     environment.expandAndPruneTree(vec3.fromValues(0, 0, 0));

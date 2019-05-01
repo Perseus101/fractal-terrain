@@ -3,7 +3,9 @@ import { Drawable } from "./drawable";
 import { BufferSet, ModelBufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
-import RNG from '../rng';
+import RNG, { PerlinRNG } from '../rng';
+import Biome from '../biome/biome';
+import { BiomeContainer, BiomeQuad } from '../biome/container';
 
 function reverse(binary: number, length: number) {
     let result = 0;
@@ -59,14 +61,19 @@ function getNormal(a : vec3, b : vec3, c : vec3) {
 
 //this is basically a dividable quadrilateral
 export class Patch {
-    bl: vec3;
-    br: vec3;
-    tl: vec3;
-    tr: vec3;
-    midpoint: vec3;
-    rng: RNG;
+    static readonly perlin = new PerlinRNG();
 
-    constructor(bl: vec3, br: vec3, tl: vec3, tr: vec3, rng: RNG) {
+    midpoint: vec3;
+
+    constructor(
+        public bl: vec3,
+        public br: vec3,
+        public tl: vec3,
+        public tr: vec3,
+        public rng: RNG,
+        public biomes?: BiomeContainer,
+        public biomeQuad?: BiomeQuad
+    ) {
         this.bl = bl;
         this.br = br;
         this.tl = tl;
@@ -74,6 +81,41 @@ export class Patch {
         this.rng = rng;
 
         this.computeMidpoint();
+        if(this.biomeQuad === undefined) {
+            if(this.biomes === undefined) {
+                throw new Error("BiomeContainer required when BiomeQuad not present");
+            }
+            this.generateBiomeQuad();
+        }
+    }
+
+    private generateBiomeQuad() {
+        this.biomeQuad = new BiomeQuad(this.biomes, [
+            this.generateBiomeWeights(this.bl),
+            this.generateBiomeWeights(this.tl),
+            this.generateBiomeWeights(this.br),
+            this.generateBiomeWeights(this.tr)
+        ], [
+            this.bl, this.tl, this.br, this.tr
+        ])
+    }
+
+    private generateBiomeWeights(point: vec3): number[] {
+        const scale = 0.005;
+        let x = point[0] / scale;
+        let z = point[2] / scale;
+        let biomeWeights = [];
+        let y = 0.1;
+
+        for(let i = 0; i < this.biomes.biomeCount(); i++) {
+            y += i * 2.8;
+            let val = Patch.perlin.noise(x, y, z);
+            if(val < 0) {
+                val = 0.1;
+            }
+            biomeWeights.push(val);
+        }
+        return biomeWeights;
     }
 
     private computeMidpoint() {
@@ -83,6 +125,10 @@ export class Patch {
         vec3.add(this.midpoint, this.midpoint, this.tr);
         vec3.add(this.midpoint, this.midpoint, this.br);
         vec3.scale(this.midpoint, this.midpoint, 1 / 4);
+    }
+
+    getBiome(point: vec3): Biome {
+        return this.biomeQuad.bilerp(point)
     }
 
     divide(currentDepth: number) {
@@ -102,17 +148,23 @@ export class Patch {
 
         let midpoint = vec3.clone(this.midpoint);
 
-        midLeft[1] += this.rng.expRand(midLeft, currentDepth);
-        midTop[1] += this.rng.expRand(midTop, currentDepth);
-        midRight[1] += this.rng.expRand(midRight, currentDepth);
-        midBottom[1] += this.rng.expRand(midBottom, currentDepth);
-        midpoint[1] += this.rng.expRand(midpoint, currentDepth);
+        // let biome = this.biomes.createInterpolatedBiome(this.biomeWeights);
 
+        midLeft[1] += this.rng.expRand(midLeft, currentDepth/*, 1, biome.amplitude*/);
+        midTop[1] += this.rng.expRand(midTop, currentDepth/*, 1, biome.amplitude*/);
+        midRight[1] += this.rng.expRand(midRight, currentDepth/*, 1, biome.amplitude*/);
+        midBottom[1] += this.rng.expRand(midBottom, currentDepth/*, 1, biome.amplitude*/);
+        midpoint[1] += this.rng.expRand(midpoint, currentDepth/*, 1, biome.amplitude*/);
+
+        let biomeQuad: BiomeQuad = undefined;
+        if(currentDepth > 1) {
+            biomeQuad = this.biomeQuad;
+        }
         return [
-            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng), //bottom left corner
-            new Patch(midBottom, this.br, midpoint, midRight, this.rng), //bottom right corner
-            new Patch(midLeft, midpoint, this.tl, midTop, this.rng), //top left corner
-            new Patch(midpoint, midRight, midTop, this.tr, this.rng) //top right corner
+            new Patch(this.bl, midBottom, midLeft, midpoint, this.rng, this.biomes, biomeQuad), //bottom left corner
+            new Patch(midBottom, this.br, midpoint, midRight, this.rng, this.biomes, biomeQuad), //bottom right corner
+            new Patch(midLeft, midpoint, this.tl, midTop, this.rng, this.biomes, biomeQuad), //top left corner
+            new Patch(midpoint, midRight, midTop, this.tr, this.rng, this.biomes, biomeQuad) //top right corner
         ]
     }
 
@@ -185,28 +237,28 @@ export class Patch {
                 let br = pX;
                 let tl = pY;
                 let tr = pXY;
-                return new Patch(bl, br, tl, tr, this.rng);
+                return new Patch(bl, br, tl, tr, this.rng, this.biomes);
             }
             case Quadrant.Br: {
                 let br = anchor;
                 let bl = pX;
                 let tr = pY;
                 let tl = pXY;
-                return new Patch(bl, br, tl, tr, this.rng);
+                return new Patch(bl, br, tl, tr, this.rng, this.biomes);
             }
             case Quadrant.Tl: {
                 let tl = anchor;
                 let tr = pX;
                 let bl = pY;
                 let br = pXY;
-                return new Patch(bl, br, tl, tr, this.rng);
+                return new Patch(bl, br, tl, tr, this.rng, this.biomes);
             }
             case Quadrant.Tr: {
                 let tr = anchor;
                 let tl = pX;
                 let br = pY;
                 let bl = pXY;
-                return new Patch(bl, br, tl, tr, this.rng);
+                return new Patch(bl, br, tl, tr, this.rng, this.biomes);
             }
         }
     }
@@ -219,7 +271,6 @@ abstract class Fractal implements Environment {
 
     updatePositionGivenCollisions(pos: vec3): boolean {
         let newY = this.getYAt(pos);
-        // console.log(pos[1], newY);
         if (newY != pos[1]) {
             pos[1] = newY + 0.4;
             return true;
@@ -247,7 +298,13 @@ export class FractalNode extends Fractal {
     tlPatch: Patch;
     trPatch: Patch;
 
-    constructor(private gl: WebGLRenderingContext, public patch: Patch, private depth: number, private policies: any, private isRoot) {
+    constructor(
+        private gl: WebGLRenderingContext,
+        public patch: Patch,
+        private depth: number,
+        private policies: any,
+        private isRoot: boolean
+    ) {
         super();
         this.computeAndStoreDivisions();
     }
@@ -476,8 +533,10 @@ export class BufferedFractal extends Fractal {
     sqrtSize: number;
     floraBuffer : ModelBufferSet;
 
+
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
         super();
+
         this.patch = patch;
         this.finalDepth = depth + layersToRecurse - 1;
 
@@ -525,6 +584,16 @@ export class BufferedFractal extends Fractal {
             // builder.normals.push(normal[0], normal[1], normal[2]);
             // builder.normals.push(normB[0], normB[1], normB[2]);
             // builder.normals.push(normal[0], normal[1], normal[2]);
+
+            let blBiome = patch.getBiome(patch.bl);
+            let brBiome = patch.getBiome(patch.br);
+            let tlBiome = patch.getBiome(patch.tl);
+            let trBiome = patch.getBiome(patch.tr);
+
+            builder.colors.push(blBiome.color[0], blBiome.color[1], blBiome.color[2]);
+            builder.colors.push(brBiome.color[0], brBiome.color[1], brBiome.color[2]);
+            builder.colors.push(tlBiome.color[0], tlBiome.color[1], tlBiome.color[2]);
+            builder.colors.push(trBiome.color[0], trBiome.color[1], trBiome.color[2]);
 
             let len = builder.vertices.length / 3;
             builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);

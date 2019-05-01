@@ -4,10 +4,11 @@ import { mat4 } from "gl-matrix";
 export class BufferSet {
     vertexBuffer: WebGLBuffer;
     normalBuffer: WebGLBuffer;
+    colorBuffer: WebGLBuffer;
     indexBuffer: WebGLBuffer;
     triangleCount: number;
 
-    constructor(gl: WebGLRenderingContext, vertices: any[], normals: any[], triangles: any[]) {
+    constructor(gl: WebGLRenderingContext, vertices: any[], normals: any[], colors: any[], triangles: any[]) {
         let flatTriangles = (triangles as any).flat();
         this.triangleCount = flatTriangles.length;
 
@@ -18,6 +19,11 @@ export class BufferSet {
         this.normalBuffer = gl.createBuffer(); // init empty webgl set normal component buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer); // activate that buffer
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array((normals as any).flat()), gl.STATIC_DRAW); // data in
+
+        this.colorBuffer = gl.createBuffer(); // init empty webgl set normal component buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer); // activate that buffer
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array((colors as any).flat()), gl.STATIC_DRAW); // data in
+
 
         this.indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer); // activate that buffer
@@ -30,6 +36,8 @@ export class BufferSet {
         gl.vertexAttribPointer(shader.vPosAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
         gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer); // activate normal buffer
         gl.vertexAttribPointer(shader.vNormAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer); // activate normal buffer
+        gl.vertexAttribPointer(shader.vColorAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer); // activate index buffer
         gl.drawElements(gl.TRIANGLES, this.triangleCount, gl.UNSIGNED_SHORT, 0); // render
     }
@@ -38,8 +46,20 @@ export class BufferSet {
 export class ModelBufferSet extends BufferSet {
     public transforms: mat4[];
     constructor(gl: WebGLRenderingContext, model: any) {
-        super(gl, model.vertices, model.normals, model.triangles);
+        super(gl,
+            model.vertices,
+            model.normals,
+            ModelBufferSet.defaultColor(model.vertices.length),
+            model.triangles);
         this.transforms = [];
+    }
+
+    static defaultColor(l: number): number[] {
+        let colors = [];
+        for(let i = 0; i < l; i++) {
+            colors.push(0.8, 0.5, 0.25);
+        }
+        return colors;
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
@@ -66,9 +86,10 @@ export class ModelBufferSet extends BufferSet {
 export class BufferSetBuilder {
     public vertices: any[] = [];
     public normals: any[] = [];
+    public colors: any[] = [];
     public triangles: any[] = [];
 
     build(gl: WebGLRenderingContext): BufferSet {
-        return new BufferSet(gl, this.vertices, this.normals, this.triangles);
+        return new BufferSet(gl, this.vertices, this.normals, this.colors, this.triangles);
     }
 }

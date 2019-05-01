@@ -30,11 +30,14 @@ uniform float uShininess; // the specular exponent
 // geometry properties
 varying vec3 vWorldPos; // world xyz of fragment
 varying vec3 vVertexNormal; // normal of fragment
+varying vec3 vVertexColor; // interpolated vertex color
 
 void main(void) {
 
     // ambient term
     //vec3 ambient = uAmbient*uSunAmbient;
+
+    vec3 diffuse = uDiffuse * vVertexColor;
 
     // sunset
     //vec3 modifiedSun = vec3(0.4 + abs(uSunDirection.y) * 0.6, max(0.5, abs(uSunDirection.y)), max(0.5, min(0.92, abs(uSunDirection.y))));
@@ -49,12 +52,12 @@ void main(void) {
     vec3 normal = normalize(vVertexNormal);
     vec3 sunLight = uSunDirection;
     float sunLambert = max(0.0,dot(normal,sunLight));
-    vec3 sunDiffuse = uDiffuse*modifiedSun*sunLambert; // diffuse from sun
+    vec3 sunDiffuse = diffuse*modifiedSun*sunLambert; // diffuse from sun
 
     // moon diffuse
     vec3 moonLight = uSunDirection * -1.0;
     float moonLambert = max(0.0,dot(normal,moonLight));
-    vec3 moonDiffuse = uDiffuse*uMoonDiffuse*moonLambert; // diffuse from moon
+    vec3 moonDiffuse = diffuse*uMoonDiffuse*moonLambert; // diffuse from moon
 
     // flashlight diffuse
     vec3 eyeOffset = uEyePosition - vWorldPos;
@@ -70,7 +73,7 @@ void main(void) {
     float angle = dot(uLookAt, eye * -1.0);
     float lightValue = pow(angle, 5.0) * uFlashLightOn / 2.0;//pow(max(1.0, length(eyeOffset)*4.0), 2.0);
     vec3 flashLightDiffuse;
-    flashLightDiffuse = uDiffuse*flashLightLambert * lightValue;
+    flashLightDiffuse = diffuse*flashLightLambert * lightValue;
 
     // combine to find lit color
     vec3 litColor = ambient + sunDiffuse + moonDiffuse + flashLightDiffuse;
