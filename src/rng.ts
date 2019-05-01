@@ -23,7 +23,7 @@ export class RNG {
     }
 
     hashCombine(lhs: number, rhs: number) {
-        return lhs * 19.0 + rhs;
+        return lhs * 19.0 + rhs * 17;
     }
 
     /* Note, this ignores the y value when seeding */

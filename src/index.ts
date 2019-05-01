@@ -39,9 +39,9 @@ function main() {
     );
     let policies = {
         policyList: [
-            { from: undefined, to: 5, bufferAt: 2 },
-            { from: 5, to: 50, bufferAt: -5 },
-            { from: 50, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
+            { from: undefined, to: 25, bufferAt: 2 },
+            { from: 25, to: 100, bufferAt: -10 },
+            { from: 100, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
         ],
         newNodeCutoff: 50
     };

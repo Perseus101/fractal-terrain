@@ -55,7 +55,7 @@ export class Camera {
         var pMatrix = mat4.create(); // projection matrix
 
         mat4.fromScaling(hMatrix, vec3.fromValues(-1, 1, 1)); // create handedness matrix
-        mat4.perspective(pMatrix, 0.4 * Math.PI, gl.canvas.width / gl.canvas.height, 0.001, 100); // create projection matrix
+        mat4.perspective(pMatrix, 0.4 * Math.PI, gl.canvas.width / gl.canvas.height, 0.001, 1000); // create projection matrix
 
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
     }

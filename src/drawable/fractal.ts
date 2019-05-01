@@ -221,7 +221,7 @@ abstract class Fractal implements Environment {
         let newY = this.getYAt(pos);
         // console.log(pos[1], newY);
         if (newY != pos[1]) {
-            pos[1] = newY + 0.1;
+            pos[1] = newY + 0.4;
             return true;
         } else {
             return false;
