@@ -25,10 +25,9 @@ function main() {
     let shader = createShader(gl);
 
     let biomes = new BiomeContainer([
-        new Biome(vec3.fromValues(0.7, 0.7, 0.7), 800),
-        new Biome(vec3.fromValues(0.2, 1, 0.2), 200),
-        new Biome(vec3.fromValues(0.2, 1, 0.2), 100),
-        new Biome(vec3.fromValues(1, 1, 0.88), 10)
+        new Biome(vec3.fromValues(0.4, 0.4, 0.4), 900, 0.99995),
+        new Biome(vec3.fromValues(0.2, 1, 0.2), 70, 0.99),
+        new Biome(vec3.fromValues(0.8, 0.8, 0.1), 25, 1.01)
     ]);
 
     Flora.treeModel = require('./assets/tree.json');

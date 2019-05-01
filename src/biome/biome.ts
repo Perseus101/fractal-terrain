@@ -4,6 +4,7 @@ export class Biome {
     constructor(
         public color: vec3,
         public amplitude: number,
+        public foliage: number,
     ) {}
 }
 

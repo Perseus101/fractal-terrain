@@ -606,7 +606,11 @@ export class BufferedFractal extends Fractal {
         } else {
             let subPatches = patch.divide(n);
             let rand = patch.rng.seededRandom(patch.midpoint);
-            if (!barren && rand > 0.999 && n >= 12) {
+            let foliage = patch.getBiome(patch.midpoint).foliage;
+            if((window as any).test === undefined || foliage > (window as any).test) {
+                (window as any).test = foliage;
+            }
+            if (!barren && rand > foliage && n >= 14) {
                 barren = true;
                 this.floraBuffer.transforms.push(Flora.getTransform(patch));
             }

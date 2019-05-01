@@ -1,6 +1,12 @@
 import { vec3 } from 'gl-matrix';
 import Biome from "./biome";
 
+function softmax(arr: number[]): number[] {
+    return arr.map((value: number, index: number) => {
+      return Math.exp(value) / arr.map( (y) => { return Math.exp(y) } ).reduce( (a,b) => { return a+b })
+    })
+}
+
 export class BiomeContainer {
     constructor(private biomes: Biome[]) {}
 
@@ -9,21 +15,26 @@ export class BiomeContainer {
     }
 
     createInterpolatedBiome(weights: number[]): Biome {
+        let softmaxWeights = softmax(weights);
         if(weights.length !== this.biomes.length) {
             throw new Error("Incorrect biome weight length");
         }
-        let newBiome = new Biome(vec3.create(), 0);
+        let newBiome = new Biome(vec3.create(), 0, 0);
         let weightMag = 0;
+        let softmaxMag = 0;
         for (let i = 0; i < this.biomes.length; i++) {
             let biome = this.biomes[i];
             let weight = weights[i];
             weightMag += weight;
+            softmaxMag += softmaxWeights[i];
 
             vec3.add(newBiome.color, newBiome.color, [weight * biome.color[0], weight * biome.color[1], weight * biome.color[2]]);
             newBiome.amplitude += weight * biome.amplitude;
+            newBiome.foliage += softmaxWeights[i] * biome.foliage;
         }
         vec3.scale(newBiome.color, newBiome.color, 1/weightMag);
         newBiome.amplitude /= weightMag;
+        newBiome.foliage /= softmaxMag;
         return newBiome;
     }
 }
