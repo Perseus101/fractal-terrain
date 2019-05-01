@@ -262,6 +262,10 @@ export class Patch {
             }
         }
     }
+
+    contains(point: vec3): boolean {
+        return point[0] >= this.bl[0] && point[0] <= this.br[0] && point[2] >= this.bl[2] && point[2] <= this.tl[2];
+    }
 }
 
 abstract class Fractal implements Environment {
@@ -287,6 +291,13 @@ export enum Quadrant {
     Tr,
 }
 
+export enum Direction {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
 //This is the tree that either contains more trees, or eventually a BufferedFractal which is a leaf node
 export class FractalNode extends Fractal {
     bl: Fractal;
@@ -303,7 +314,7 @@ export class FractalNode extends Fractal {
         public patch: Patch,
         private depth: number,
         private policies: any,
-        private isRoot: boolean
+        public parent: FractalNode
     ) {
         super();
         this.computeAndStoreDivisions();
@@ -335,10 +346,10 @@ export class FractalNode extends Fractal {
         else {
             if (this.depth + 1 >= blP.bufferAt) {
                 if (!this.bl || !(this.bl instanceof BufferedFractal))
-                    this.bl = new BufferedFractal(this.gl, this.blPatch, this.depth + 1, 6);
+                    this.bl = new BufferedFractal(this.gl, this.blPatch, this.depth + 1, 6, this);
             } else {
                 if (!this.bl || !(this.bl instanceof FractalNode))
-                    this.bl = new FractalNode(this.gl, this.blPatch, this.depth + 1, this.policies, false);
+                    this.bl = new FractalNode(this.gl, this.blPatch, this.depth + 1, this.policies, this);
                 (this.bl as FractalNode).expandAndPruneTree(playerPosition);
             }
         }
@@ -348,10 +359,10 @@ export class FractalNode extends Fractal {
         else {
             if (this.depth + 1 >= brP.bufferAt) {
                 if (!this.br || !(this.br instanceof BufferedFractal))
-                    this.br = new BufferedFractal(this.gl, this.brPatch, this.depth + 1, 6);
+                    this.br = new BufferedFractal(this.gl, this.brPatch, this.depth + 1, 6, this);
             } else {
                 if (!this.br || !(this.br instanceof FractalNode))
-                    this.br = new FractalNode(this.gl, this.brPatch, this.depth + 1, this.policies, false);
+                    this.br = new FractalNode(this.gl, this.brPatch, this.depth + 1, this.policies, this);
                 (this.br as FractalNode).expandAndPruneTree(playerPosition);
             }
         }
@@ -361,10 +372,10 @@ export class FractalNode extends Fractal {
         else {
             if (this.depth + 1 >= tlP.bufferAt) {
                 if (!this.tl || !(this.tl instanceof BufferedFractal))
-                    this.tl = new BufferedFractal(this.gl, this.tlPatch, this.depth + 1, 6);
+                    this.tl = new BufferedFractal(this.gl, this.tlPatch, this.depth + 1, 6, this);
             } else {
                 if (!this.tl || !(this.tl instanceof FractalNode))
-                    this.tl = new FractalNode(this.gl, this.tlPatch, this.depth + 1, this.policies, false);
+                    this.tl = new FractalNode(this.gl, this.tlPatch, this.depth + 1, this.policies, this);
                 (this.tl as FractalNode).expandAndPruneTree(playerPosition);
             }
         }
@@ -374,10 +385,10 @@ export class FractalNode extends Fractal {
         else {
             if (this.depth + 1 >= trP.bufferAt) {
                 if (!this.tr || !(this.tr instanceof BufferedFractal))
-                    this.tr = new BufferedFractal(this.gl, this.trPatch, this.depth + 1, 6);
+                    this.tr = new BufferedFractal(this.gl, this.trPatch, this.depth + 1, 6, this);
             } else {
                 if (!this.tr || !(this.tr instanceof FractalNode))
-                    this.tr = new FractalNode(this.gl, this.trPatch, this.depth + 1, this.policies, false);
+                    this.tr = new FractalNode(this.gl, this.trPatch, this.depth + 1, this.policies, this);
                 (this.tr as FractalNode).expandAndPruneTree(playerPosition);
             }
         }
@@ -404,7 +415,7 @@ export class FractalNode extends Fractal {
     }
 
     becomeRootIfNeeded(playerPosition: vec3) {
-        if (this.isRoot) {
+        if (this.parent == undefined) {
             let renderCutoff = this.policies.newNodeCutoff;
             if (Math.abs(playerPosition[0] - this.patch.bl[0]) < renderCutoff) {
                 if (xzSquaredDistance(this.patch.bl, playerPosition) < xzSquaredDistance(this.patch.tl, playerPosition))
@@ -439,7 +450,7 @@ export class FractalNode extends Fractal {
      */
     becomeNewRoot(quadrantToBe: Quadrant) {
         let clone = this.clone();
-        clone.isRoot = false;
+        clone.parent = this;
         this.bl = undefined;
         this.br = undefined;
         this.tl = undefined;
@@ -471,7 +482,7 @@ export class FractalNode extends Fractal {
      * Performs a shallow clone
      */
     clone(): FractalNode {
-        let clone = new FractalNode(this.gl, this.patch, this.depth, this.policies, this.isRoot);
+        let clone = new FractalNode(this.gl, this.patch, this.depth, this.policies, this.parent);
         clone.bl = this.bl;
         clone.br = this.br;
         clone.tl = this.tl;
@@ -506,13 +517,17 @@ export class FractalNode extends Fractal {
             }
         }
         if (!fractal)
-            throw "Error, current position in an unloaded fractal quadrant";
+            return undefined;
         return fractal.getBufferedFractalAt(p);
     }
 
     getYAt(p: vec3): number {
         return this.getBufferedFractalAt(p).getYAt(p);
     }
+}
+
+class Neighbors {
+    constructor(public left: BufferedFractal, public up: BufferedFractal, public right: BufferedFractal, public down: BufferedFractal) {}
 }
 
 function xzSquaredDistance(a: vec3, b: vec3): number {
@@ -530,11 +545,17 @@ export class BufferedFractal extends Fractal {
     buffers: BufferSet;
     patch: Patch;
     saved_vertices: number[];
+    saved_normals: number[];
     sqrtSize: number;
     floraBuffer : ModelBufferSet;
 
+    //which normals have been fixed
+    fixedLeft = false;
+    fixedUp = false;
+    fixedRight = false;
+    fixedDown = false;
 
-    constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
+    constructor(gl: WebGLRenderingContext, patch: Patch, public depth: number, layersToRecurse: number, public parent: FractalNode) {
         super();
 
         this.patch = patch;
@@ -562,6 +583,19 @@ export class BufferedFractal extends Fractal {
         this.buffers = builder.build(gl);
         this.sqrtSize = Math.pow(2, layersToRecurse);
         this.saved_vertices = builder.vertices;
+        this.saved_normals = builder.normals;
+
+        let neighbs = this.getNeighbors();
+        if (neighbs.left)
+            neighbs.left.notifyOfNewNeighbor(this, Direction.Right);
+        if (neighbs.up)
+            neighbs.up.notifyOfNewNeighbor(this, Direction.Down);
+        if (neighbs.right)
+            neighbs.right.notifyOfNewNeighbor(this, Direction.Left);
+        if (neighbs.down)
+            neighbs.down.notifyOfNewNeighbor(this, Direction.Up);
+
+        this.buffers.setNormals(this.saved_normals);
     }
 
     fractalRecurse(gl: WebGLRenderingContext, builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number, barren: boolean) {
@@ -669,6 +703,111 @@ export class BufferedFractal extends Fractal {
         let interp = (1-xpp) * left_interp + xpp*right_interp;
 
         return interp;
+    }
+
+    notifyOfNewNeighbor(neighbor: BufferedFractal, directionRelativeToMe: Direction) {
+        if (neighbor.depth != this.depth)
+            return;
+
+        let len = this.saved_normals.length / 3;
+        let sideLen = Math.sqrt(len);
+
+        let incr;
+        let myStart;
+        let neighbStart;
+
+        switch (directionRelativeToMe) {
+            case Direction.Left: {
+                if (this.fixedLeft)
+                    return;
+                incr = sideLen;
+                myStart = 0;
+                neighbStart = sideLen - 1;
+                this.fixedLeft = true;
+                neighbor.fixedRight = true;
+                break;
+            }
+            case Direction.Up: {
+                if (this.fixedUp)
+                    return;
+                incr = 1;
+                myStart = 0;
+                neighbStart = len - sideLen;
+                this.fixedUp = true;
+                neighbor.fixedDown = true;
+                break;
+            }
+            case Direction.Right: {
+                if (this.fixedRight)
+                    return;
+                incr = sideLen;
+                myStart = sideLen - 1;
+                neighbStart = 0;
+                this.fixedRight = true;
+                neighbor.fixedLeft = true;
+                break;
+            }
+            case Direction.Down: {
+                if (this.fixedDown)
+                    return;
+                incr = 1;
+                myStart = len - sideLen;
+                neighbStart = 0;
+                this.fixedDown = true;
+                neighbor.fixedUp = true;
+                break;
+            }
+        }
+
+        for (let i = 0; i < sideLen; i++) {
+            let its_nonfractal_i = neighbStart + i*incr;
+            let my_nonfractal_i = myStart + i*incr;
+
+            let its_i = getIndex(its_nonfractal_i % sideLen, sideLen - 1 - Math.floor(its_nonfractal_i / sideLen));
+            let my_i = getIndex(my_nonfractal_i % sideLen, sideLen - 1 - Math.floor(my_nonfractal_i / sideLen));
+
+            let its_normal = vec3.fromValues(
+                neighbor.saved_normals[its_i * 3 + 0],
+                neighbor.saved_normals[its_i * 3 + 1],
+                neighbor.saved_normals[its_i * 3 + 2]
+            );
+            let my_normal = vec3.fromValues(
+                this.saved_normals[my_i * 3 + 0],
+                this.saved_normals[my_i * 3 + 1],
+                this.saved_normals[my_i * 3 + 2]
+            );
+            let avg = vec3.create(); vec3.add(avg, its_normal, my_normal); vec3.scale(avg, avg, 0.5);
+            this.saved_normals[my_i * 3 + 0] = avg[0];
+            this.saved_normals[my_i * 3 + 1] = avg[1];
+            this.saved_normals[my_i * 3 + 2] = avg[2];
+            neighbor.saved_normals[its_i * 3 + 0] = avg[0];
+            neighbor.saved_normals[its_i * 3 + 1] = avg[1];
+            neighbor.saved_normals[its_i * 3 + 2] = avg[2];
+        }
+        this.buffers.setNormals(this.saved_normals);
+        //let the neighbor update his normals when he's all done, I just need to update mine
+    }
+
+    getNeighbors(): Neighbors {
+        let rightdx = vec3.create(); vec3.subtract(rightdx, this.patch.br, this.patch.bl);
+        let updy = vec3.create(); vec3.subtract(updy, this.patch.tl, this.patch.bl);
+
+        let leftP = vec3.create(); vec3.subtract(leftP, this.patch.midpoint, rightdx);
+        let upP = vec3.create(); vec3.add(upP, this.patch.midpoint, updy);
+        let rightP = vec3.create(); vec3.add(rightP, this.patch.midpoint, rightdx);
+        let downP = vec3.create(); vec3.subtract(downP, this.patch.midpoint, updy);
+
+        return new Neighbors(this.searchUpThenDown(leftP), this.searchUpThenDown(upP), this.searchUpThenDown(rightP), this.searchUpThenDown(downP));
+    }
+
+    private searchUpThenDown(point: vec3): BufferedFractal {
+        let parent = this.parent;
+        while (!parent.patch.contains(point)) {
+            if (!parent.parent)
+                return undefined;
+            parent = parent.parent;
+        }
+        return parent.getBufferedFractalAt(point);
     }
 }
 

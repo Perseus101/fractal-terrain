@@ -8,7 +8,7 @@ export class BufferSet {
     indexBuffer: WebGLBuffer;
     triangleCount: number;
 
-    constructor(gl: WebGLRenderingContext, vertices: any[], normals: any[], colors: any[], triangles: any[]) {
+    constructor(private gl: WebGLRenderingContext, vertices: any[], normals: any[], colors: any[], triangles: any[]) {
         let flatTriangles = (triangles as any).flat();
         this.triangleCount = flatTriangles.length;
 
@@ -16,9 +16,8 @@ export class BufferSet {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer); // activate that buffer
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array((vertices as any).flat()), gl.STATIC_DRAW); // data in
 
-        this.normalBuffer = gl.createBuffer(); // init empty webgl set normal component buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer); // activate that buffer
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array((normals as any).flat()), gl.STATIC_DRAW); // data in
+        this.normalBuffer = this.gl.createBuffer(); // init empty webgl set normal component buffer
+        this.setNormals(normals);
 
         this.colorBuffer = gl.createBuffer(); // init empty webgl set normal component buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer); // activate that buffer
@@ -28,6 +27,11 @@ export class BufferSet {
         this.indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer); // activate that buffer
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(flatTriangles), gl.STATIC_DRAW); // data in
+    }
+
+    setNormals(normals: any[]) {
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.normalBuffer); // activate that buffer
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array((normals as any).flat()), this.gl.STATIC_DRAW); // data in
     }
 
     draw(gl: WebGLRenderingContext, shader: Shader) {

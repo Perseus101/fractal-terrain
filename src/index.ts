@@ -55,7 +55,7 @@ function main() {
         ],
         newNodeCutoff: 200
     };
-    let environment = new FractalNode(gl, patch, 0, policies, true)
+    let environment = new FractalNode(gl, patch, 0, policies, undefined)
     environment.expandAndPruneTree(vec3.fromValues(0, 0, 0));
     // environment.becomeNewRoot(Quadrant.Bl);
     (window as any).env = environment; //TODO: remove, for debugging only
