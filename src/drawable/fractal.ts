@@ -7,6 +7,9 @@ import RNG, { PerlinRNG } from '../rng';
 import Biome from '../biome/biome';
 import { BiomeContainer, BiomeQuad } from '../biome/container';
 
+const BIOME_DEPTH = 6;
+const BIOME_SCALE = 0.5;
+
 function reverse(binary: number, length: number) {
     let result = 0;
     for (let i = 0; i < length; i++) {
@@ -101,19 +104,22 @@ export class Patch {
     }
 
     private generateBiomeWeights(point: vec3): number[] {
-        const scale = 0.005;
+        const scale = BIOME_SCALE;
         let x = point[0] / scale;
         let z = point[2] / scale;
         let biomeWeights = [];
         let y = 0.1;
 
         for(let i = 0; i < this.biomes.biomeCount(); i++) {
-            y += i * 2.8;
+            y += i * 1000.8;
             let val = Patch.perlin.noise(x, y, z);
             if(val < 0) {
-                val = 0.1;
+                val = 0.01;
             }
             biomeWeights.push(val);
+        }
+        if(biomeWeights[0] > 1) {
+            console.log(biomeWeights);
         }
         return biomeWeights;
     }
@@ -150,14 +156,14 @@ export class Patch {
 
         // let biome = this.biomes.createInterpolatedBiome(this.biomeWeights);
 
-        midLeft[1] += this.rng.expRand(midLeft, currentDepth/*, 1, biome.amplitude*/);
-        midTop[1] += this.rng.expRand(midTop, currentDepth/*, 1, biome.amplitude*/);
-        midRight[1] += this.rng.expRand(midRight, currentDepth/*, 1, biome.amplitude*/);
-        midBottom[1] += this.rng.expRand(midBottom, currentDepth/*, 1, biome.amplitude*/);
-        midpoint[1] += this.rng.expRand(midpoint, currentDepth/*, 1, biome.amplitude*/);
+        midLeft[1] += this.rng.expRand(midLeft, currentDepth, 1, this.getBiome(midLeft).amplitude);
+        midTop[1] += this.rng.expRand(midTop, currentDepth, 1, this.getBiome(midTop).amplitude);
+        midRight[1] += this.rng.expRand(midRight, currentDepth, 1, this.getBiome(midRight).amplitude);
+        midBottom[1] += this.rng.expRand(midBottom, currentDepth, 1, this.getBiome(midBottom).amplitude);
+        midpoint[1] += this.rng.expRand(midpoint, currentDepth, 1, this.getBiome(midpoint).amplitude);
 
         let biomeQuad: BiomeQuad = undefined;
-        if(currentDepth > 1) {
+        if(currentDepth > BIOME_DEPTH) {
             biomeQuad = this.biomeQuad;
         }
         return [
@@ -600,7 +606,6 @@ export class BufferedFractal extends Fractal {
         } else {
             let subPatches = patch.divide(n);
             let rand = patch.rng.seededRandom(patch.midpoint);
-            // console.log(5/n);
             if (!barren && rand > 0.999) {
                 barren = true;
                 this.floraBuffer.transforms.push(Flora.getTransform(patch));
