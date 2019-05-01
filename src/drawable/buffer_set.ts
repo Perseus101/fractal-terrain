@@ -70,6 +70,8 @@ export class ModelBufferSet extends BufferSet {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer); // activate normal buffer
         gl.vertexAttribPointer(shader.vNormAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer); // activate index buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer); // activate normal buffer
+        gl.vertexAttribPointer(shader.vColorAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
 
         for (let transform of this.transforms) {
             gl.uniformMatrix4fv(shader.mMatrixULoc, false, transform);
