@@ -8,7 +8,7 @@ export class RNG {
     globalSeed: number;
 
     constructor(seed: number,
-        private gaussianAmplitude: number = 20,
+        private gaussianAmplitude: number = 300,
         private expBase: number = 2
     ) {
         this.globalSeed = this.hashFloat(seed)

@@ -29,7 +29,7 @@ function main() {
     Flora.rMatrix[9] = -1 * Math.sin(angle);
     Flora.rMatrix[10] = Math.cos(angle);
 
-    let size = 5 * Math.pow(2, 6);
+    let size = 5 * Math.pow(2, 10);
     let patch = new Patch(
         vec3.fromValues(-size, 0, -size),
         vec3.fromValues(size, 0, -size),
@@ -39,7 +39,7 @@ function main() {
     );
     let policies = {
         policyList: [
-            { from: undefined, to: 25, bufferAt: 8 },
+            { from: undefined, to: 25, bufferAt: 12 },
             { from: 25, to: 200, bufferAt: -100 },
             { from: 200, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
         ],
