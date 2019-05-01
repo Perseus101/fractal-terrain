@@ -11,7 +11,7 @@ const plugins = [
     }
   }),
   new HtmlWebpackPlugin({
-    title: 'Fractal Terrain',
+    title: 'Typescript Webpack Starter',
     template: '!!ejs-loader!src/index.html'
   }),
   new webpack.LoaderOptionsPlugin({

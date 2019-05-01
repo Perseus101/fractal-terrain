@@ -20,12 +20,13 @@ export class RNG {
     }
 
     hashCombine(lhs: number, rhs: number) {
-        return lhs * 19 + rhs;
+        return lhs * 19.0 + rhs * 17;
     }
 
-    seededRandom(vec: vec3, localSeed: number) {
-        let seed = this.hashCombine(this.hashCombine(this.hashCombine(this.globalSeed, localSeed), vec[0]), vec[2]);
-        let x = Math.sin(seed) * 10000;
+    /* Note, this ignores the y value when seeding */
+    seededRandom(vec: vec3, localSeed=1) {
+        let seed = this.hashCombine(this.hashCombine(vec[0], this.hashCombine(this.globalSeed, localSeed)), vec[2]);
+        let x = Math.sin(seed * 1.12) * 9999.0;
         return x - Math.floor(x);
     }
 
@@ -35,7 +36,7 @@ export class RNG {
         return Math.sqrt(-2 * Math.log(randA)) * Math.cos(2 * Math.PI * randB);
     }
 
-    expRand(vec: vec3, n: number, localSeed=1, gaussianAmplitude = 1.0) {
+    expRand(vec: vec3, n: number, localSeed=1, gaussianAmplitude = 300.0) {
         return gaussianAmplitude*this.seededRandomGauss(vec, localSeed) / Math.pow(2, n);
     }
 }

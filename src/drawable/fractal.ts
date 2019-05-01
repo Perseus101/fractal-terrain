@@ -1,5 +1,6 @@
-import { vec3 } from 'gl-matrix';
-import { BufferSet, BufferSetBuilder } from './buffer_set';
+import { vec3, mat4 } from 'gl-matrix';
+import { Drawable } from "./drawable";
+import { BufferSet, ModelBufferSet, BufferSetBuilder } from './buffer_set';
 import { Shader } from '../shaders/shader';
 import { Environment } from './environment';
 import RNG, { PerlinRNG } from '../rng';
@@ -271,7 +272,7 @@ abstract class Fractal implements Environment {
     updatePositionGivenCollisions(pos: vec3): boolean {
         let newY = this.getYAt(pos);
         if (newY != pos[1]) {
-            pos[1] = newY + 0.1;
+            pos[1] = newY + 0.4;
             return true;
         } else {
             return false;
@@ -292,62 +293,95 @@ export class FractalNode extends Fractal {
     br: Fractal;
     tl: Fractal;
     tr: Fractal;
+    blPatch: Patch;
+    brPatch: Patch;
+    tlPatch: Patch;
+    trPatch: Patch;
 
     constructor(
         private gl: WebGLRenderingContext,
-        private biomes: BiomeContainer,
         public patch: Patch,
         private depth: number,
-        private layerToBuffer: number,
+        private policies: any,
         private isRoot: boolean
     ) {
         super();
+        this.computeAndStoreDivisions();
     }
 
-    recurse(): FractalNode {
-        this.recurseOnce();
-        if (this.bl && this.bl instanceof FractalNode)
-            this.bl.recurse();
-        if (this.br && this.br instanceof FractalNode)
-            this.br.recurse();
-        if (this.tl && this.tl instanceof FractalNode)
-            this.tl.recurse();
-        if (this.tr && this.tr instanceof FractalNode)
-            this.tr.recurse();
-        return this;
+    computeAndStoreDivisions() {
+        let subdivisions = this.patch.divide(this.depth);
+        this.blPatch = subdivisions[0];
+        this.brPatch = subdivisions[1];
+        this.tlPatch = subdivisions[2];
+        this.trPatch = subdivisions[3];
     }
 
-    recurseOnce(): FractalNode {
-        let subs = this.patch.divide(this.depth);
-        if (this.depth == this.layerToBuffer - 1) {
-            if (!this.bl) {
-                this.bl = new BufferedFractal(this.gl, subs[0], this.depth + 1, 6);
+    /**
+     * Updates the tree with new nodes if the player is close enough, and will delete nodes too far from the player
+     * @param playerPosition the current position of the player
+     */
+    expandAndPruneTree(playerPosition: vec3): FractalNode {
+        this.becomeRootIfNeeded(playerPosition);
+
+        let blP = this.getPolicyFor(this.blPatch, playerPosition);
+        let brP = this.getPolicyFor(this.brPatch, playerPosition);
+        let tlP = this.getPolicyFor(this.tlPatch, playerPosition);
+        let trP = this.getPolicyFor(this.trPatch, playerPosition);
+
+        // console.log("bl");
+        if (!blP || !blP.bufferAt)
+            this.bl = undefined;
+        else {
+            if (this.depth + 1 >= blP.bufferAt) {
+                if (!this.bl || !(this.bl instanceof BufferedFractal))
+                    this.bl = new BufferedFractal(this.gl, this.blPatch, this.depth + 1, 6);
+            } else {
+                if (!this.bl || !(this.bl instanceof FractalNode))
+                    this.bl = new FractalNode(this.gl, this.blPatch, this.depth + 1, this.policies, false);
+                (this.bl as FractalNode).expandAndPruneTree(playerPosition);
             }
-            if (!this.br) {
-                this.br = new BufferedFractal(this.gl, subs[1], this.depth + 1, 6);
-            }
-            if (!this.tl) {
-                this.tl = new BufferedFractal(this.gl, subs[2], this.depth + 1, 6);
-            }
-            if (!this.tr) {
-                this.tr = new BufferedFractal(this.gl, subs[3], this.depth + 1, 6);
-            }
-        } else {
-            if (!this.bl)
-                this.bl = new FractalNode(this.gl, this.biomes, subs[0], this.depth + 1, this.layerToBuffer, false);
-            if (!this.br)
-                this.br = new FractalNode(this.gl, this.biomes, subs[1], this.depth + 1, this.layerToBuffer, false);
-            if (!this.tl)
-                this.tl = new FractalNode(this.gl, this.biomes, subs[2], this.depth + 1, this.layerToBuffer, false);
-            if (!this.tr)
-                this.tr = new FractalNode(this.gl, this.biomes, subs[3], this.depth + 1, this.layerToBuffer, false);
         }
-        return this;
-    }
+        // console.log("br");
+        if (!brP || !brP.bufferAt)
+            this.br = undefined;
+        else {
+            if (this.depth + 1 >= brP.bufferAt) {
+                if (!this.br || !(this.br instanceof BufferedFractal))
+                    this.br = new BufferedFractal(this.gl, this.brPatch, this.depth + 1, 6);
+            } else {
+                if (!this.br || !(this.br instanceof FractalNode))
+                    this.br = new FractalNode(this.gl, this.brPatch, this.depth + 1, this.policies, false);
+                (this.br as FractalNode).expandAndPruneTree(playerPosition);
+            }
+        }
+        // console.log("tl");
+        if (!tlP || !tlP.bufferAt)
+            this.tl = undefined;
+        else {
+            if (this.depth + 1 >= tlP.bufferAt) {
+                if (!this.tl || !(this.tl instanceof BufferedFractal))
+                    this.tl = new BufferedFractal(this.gl, this.tlPatch, this.depth + 1, 6);
+            } else {
+                if (!this.tl || !(this.tl instanceof FractalNode))
+                    this.tl = new FractalNode(this.gl, this.tlPatch, this.depth + 1, this.policies, false);
+                (this.tl as FractalNode).expandAndPruneTree(playerPosition);
+            }
+        }
+        // console.log("tr");
+        if (!trP || !trP.bufferAt)
+            this.tr = undefined;
+        else {
+            if (this.depth + 1 >= trP.bufferAt) {
+                if (!this.tr || !(this.tr instanceof BufferedFractal))
+                    this.tr = new BufferedFractal(this.gl, this.trPatch, this.depth + 1, 6);
+            } else {
+                if (!this.tr || !(this.tr instanceof FractalNode))
+                    this.tr = new FractalNode(this.gl, this.trPatch, this.depth + 1, this.policies, false);
+                (this.tr as FractalNode).expandAndPruneTree(playerPosition);
+            }
+        }
 
-    recurseOnceIfNeeded(): FractalNode {
-        if (!this.bl || !this.br || !this.tl || !this.tr)
-            this.recurseOnce();
         return this;
     }
 
@@ -355,52 +389,47 @@ export class FractalNode extends Fractal {
      * Updates the tree with new nodes if the player is close enough, and will delete nodes too far from the player
      * @param playerPosition the current position of the player
      */
-    expandAndPruneTree(playerPosition: vec3) {
-        let renderCutoff = 5;
-        let despawnCutoff = 6;
+    getPolicyFor(patch: Patch, playerPosition: vec3) {
+        let circumscribedRadius = xzDistance(patch.bl, patch.br) * Math.sqrt(2) / 2;
+        let sqDist = xzSquaredDistance(patch.midpoint, playerPosition);
+
+        for (let policy of this.policies.policyList) {
+            // console.log(policy, sqDist, circumscribedRadius, Math.pow(policy.from + circumscribedRadius, 2), Math.pow(policy.to + circumscribedRadius, 2));
+            if ((!policy.from || sqDist >= Math.pow(policy.from + circumscribedRadius, 2)) && (!policy.to || sqDist < Math.pow(policy.to + circumscribedRadius, 2))) {
+                return policy;
+            }
+        }
+
+        return undefined;
+    }
+
+    becomeRootIfNeeded(playerPosition: vec3) {
         if (this.isRoot) {
+            let renderCutoff = this.policies.newNodeCutoff;
             if (Math.abs(playerPosition[0] - this.patch.bl[0]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.bl, playerPosition) < vec3.squaredDistance(this.patch.tl, playerPosition))
+                if (xzSquaredDistance(this.patch.bl, playerPosition) < xzSquaredDistance(this.patch.tl, playerPosition))
                     this.becomeNewRoot(Quadrant.Tr);
                 else
                     this.becomeNewRoot(Quadrant.Br);
             }
             if (Math.abs(playerPosition[0] - this.patch.br[0]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.br, playerPosition) < vec3.squaredDistance(this.patch.tr, playerPosition))
+                if (xzSquaredDistance(this.patch.br, playerPosition) < xzSquaredDistance(this.patch.tr, playerPosition))
                     this.becomeNewRoot(Quadrant.Tl);
                 else
                     this.becomeNewRoot(Quadrant.Bl);
             }
             if (Math.abs(playerPosition[2] - this.patch.tl[2]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.tl, playerPosition) < vec3.squaredDistance(this.patch.tr, playerPosition))
+                if (xzSquaredDistance(this.patch.tl, playerPosition) < xzSquaredDistance(this.patch.tr, playerPosition))
                     this.becomeNewRoot(Quadrant.Br);
                 else
                     this.becomeNewRoot(Quadrant.Bl);
             }
             if (Math.abs(playerPosition[2] - this.patch.bl[2]) < renderCutoff) {
-                if (vec3.squaredDistance(this.patch.bl, playerPosition) < vec3.squaredDistance(this.patch.br, playerPosition))
+                if (xzSquaredDistance(this.patch.bl, playerPosition) < xzSquaredDistance(this.patch.br, playerPosition))
                     this.becomeNewRoot(Quadrant.Tr);
                 else
                     this.becomeNewRoot(Quadrant.Tl);
             }
-        }
-
-        let circumscribed = vec3.distance(this.patch.bl, this.patch.br) * Math.sqrt(2);
-        if (vec3.squaredDistance(this.patch.midpoint, playerPosition) < Math.pow(renderCutoff + circumscribed, 2)) {
-            this.recurseOnceIfNeeded();
-            if (this.bl instanceof FractalNode)
-                this.bl.expandAndPruneTree(playerPosition);
-            if (this.br instanceof FractalNode)
-                this.br.expandAndPruneTree(playerPosition);
-            if (this.tl instanceof FractalNode)
-                this.tl.expandAndPruneTree(playerPosition);
-            if (this.tr instanceof FractalNode)
-                this.tr.expandAndPruneTree(playerPosition);
-        } else if (vec3.squaredDistance(this.patch.midpoint, playerPosition) > Math.pow(despawnCutoff + circumscribed, 2)) {
-            this.bl = undefined;
-            this.br = undefined;
-            this.tl = undefined;
-            this.tr = undefined;
         }
     }
 
@@ -435,13 +464,14 @@ export class FractalNode extends Fractal {
         }
         this.depth -= 1;
         this.patch = this.patch.undivide(quadrantToBe, clone.depth);
+        this.computeAndStoreDivisions();
     }
 
     /**
      * Performs a shallow clone
      */
     clone(): FractalNode {
-        let clone = new FractalNode(this.gl, this.biomes, this.patch, this.depth, this.layerToBuffer, this.isRoot);
+        let clone = new FractalNode(this.gl, this.patch, this.depth, this.policies, this.isRoot);
         clone.bl = this.bl;
         clone.br = this.br;
         clone.tl = this.tl;
@@ -485,6 +515,14 @@ export class FractalNode extends Fractal {
     }
 }
 
+function xzSquaredDistance(a: vec3, b: vec3): number {
+    return (a[0] - b[0]) * (a[0] - b[0]) + (a[2] - b[2]) * (a[2] - b[2]);
+}
+
+function xzDistance(a: vec3, b: vec3): number {
+    return Math.sqrt(xzSquaredDistance(a, b));
+}
+
 //This is a leaf of a fractal tree, and actually contains buffer data that can be drawn
 export class BufferedFractal extends Fractal {
     finalDepth : number;
@@ -493,6 +531,7 @@ export class BufferedFractal extends Fractal {
     patch: Patch;
     saved_vertices: number[];
     sqrtSize: number;
+    floraBuffer : ModelBufferSet;
 
 
     constructor(gl: WebGLRenderingContext, patch: Patch, depth: number, layersToRecurse: number) {
@@ -502,9 +541,12 @@ export class BufferedFractal extends Fractal {
         this.finalDepth = depth + layersToRecurse - 1;
 
         let quadNormals: vec3[] = [];
+        this.floraBuffer = new ModelBufferSet(gl, Flora.treeModel);
 
         let builder = new BufferSetBuilder();
-        this.fractalRecurse(builder, quadNormals, patch, depth);
+        this.fractalRecurse(gl, builder, quadNormals, patch, depth, false);
+
+        // console.log(this.floraBuffer.transforms);
 
         for (let i = 0; i < quadNormals.length / 3; i++) {
             let result = getCoord(i);
@@ -522,7 +564,7 @@ export class BufferedFractal extends Fractal {
         this.saved_vertices = builder.vertices;
     }
 
-    fractalRecurse(builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number) {
+    fractalRecurse(gl: WebGLRenderingContext, builder: BufferSetBuilder, quadNormals: vec3[], patch: Patch, n: number, barren: boolean) {
         if (n == this.finalDepth) {
             // this adds a square
             builder.vertices.push(patch.bl[0], patch.bl[1], patch.bl[2]);
@@ -557,9 +599,15 @@ export class BufferedFractal extends Fractal {
             builder.triangles.push(len - 4, len - 2, len - 3, len - 2, len - 1, len - 3);
         } else {
             let subPatches = patch.divide(n);
+            let rand = patch.rng.seededRandom(patch.midpoint);
+            // console.log(5/n);
+            if (!barren && rand > 0.999) {
+                barren = true;
+                this.floraBuffer.transforms.push(Flora.getTransform(patch));
+            }
 
             for (let subPatch of subPatches) {
-                this.fractalRecurse(builder, quadNormals, subPatch, n + 1);
+                this.fractalRecurse(gl, builder, quadNormals, subPatch, n + 1, barren);
             }
         }
     }
@@ -588,6 +636,7 @@ export class BufferedFractal extends Fractal {
 
     draw(gl: WebGLRenderingContext, shader: Shader) {
         this.buffers.draw(gl, shader);
+        this.floraBuffer.draw(gl, shader);
     }
 
     getBufferedFractalAt(p: vec3): BufferedFractal {
@@ -620,5 +669,35 @@ export class BufferedFractal extends Fractal {
         let interp = (1-xpp) * left_interp + xpp*right_interp;
 
         return interp;
+    }
+}
+
+export class Flora {
+
+    static treeModel: any;
+    static rMatrix: mat4;
+
+    static getTransform(patch: Patch) {
+        // Translate the model to a location on the patch
+        let loc = patch.midpoint;
+
+        // Scale the model based on the size of the patch
+        let dif = vec3.create();
+        vec3.sub(dif, patch.bl, patch.tr);
+        dif[1] = 0;
+        let size = vec3.length(dif);
+        size /= 20.0;
+
+        let mMatrix = mat4.create();
+        // scale
+        mMatrix[0] = size;
+        mMatrix[5] = size;
+        mMatrix[10] = size;
+        // translate
+        mMatrix[12] = loc[0];
+        mMatrix[13] = loc[1];
+        mMatrix[14] = loc[2];
+
+        return mat4.multiply(mat4.create(), mMatrix, Flora.rMatrix);
     }
 }

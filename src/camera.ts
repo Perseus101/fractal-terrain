@@ -21,7 +21,7 @@ export class Camera {
 
     perspective: mat4;
 
-    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.02, rotDelta: number = 0.005) {
+    constructor(gl: WebGLRenderingContext, eye: vec3, center: vec3, up: vec3, delta: number = 0.1, rotDelta: number = 0.005) {
         this.eye = eye;
         this.center = center;
         this.lookAt = vec3.create();
@@ -44,7 +44,7 @@ export class Camera {
         this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
-        this.gravity = true;
+        this.gravity = false;
 
         this.perspective = mat4.create();
         this.createPerspective(gl);
@@ -55,7 +55,7 @@ export class Camera {
         var pMatrix = mat4.create(); // projection matrix
 
         mat4.fromScaling(hMatrix, vec3.fromValues(-1, 1, 1)); // create handedness matrix
-        mat4.perspective(pMatrix, 0.4 * Math.PI, gl.canvas.width / gl.canvas.height, 0.001, 10); // create projection matrix
+        mat4.perspective(pMatrix, 0.4 * Math.PI, gl.canvas.width / gl.canvas.height, 0.001, 1000); // create projection matrix
 
         mat4.multiply(this.perspective, hMatrix, pMatrix); // handedness * projection
     }
@@ -73,6 +73,7 @@ export class Camera {
 
         mat4.multiply(hpvMatrix, this.perspective, hpvMatrix);
         gl.uniformMatrix4fv(shader.pvmMatrixULoc, false, hpvMatrix);
+        shader.pvmMatrix = hpvMatrix;
         gl.uniform3fv(shader.eyePositionULoc, this.eye); // pass in the eye's location
         gl.uniform3fv(shader.lookAtULoc, this.lookAt);
         gl.uniform1f(shader.flashLightOnULoc, this.flashLight ? 1.0 : 0.0);

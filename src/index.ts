@@ -1,9 +1,9 @@
-import { vec3 } from 'gl-matrix';
+import { vec3, mat4 } from 'gl-matrix';
 
 import { setupWebGL } from './setupWebGL';
 import { createShader, Shader } from './shaders/shader';
 import { Environment } from './drawable/environment';
-import { Patch, FractalNode, Quadrant } from './drawable/fractal';
+import { Patch, FractalNode, Flora, Quadrant } from './drawable/fractal';
 import { Camera } from './camera';
 import RNG from './rng';
 
@@ -23,22 +23,41 @@ function main() {
     let canvas: any = document.getElementById("canvas");
     let gl = setupWebGL(canvas);
     let shader = createShader(gl);
-    let size = 2.5;
+
     let biomes = new BiomeContainer([
         new Biome(vec3.fromValues(1, 1, 1), 1),
         new Biome(vec3.fromValues(0.2, 1, 0.2), 0.2),
         new Biome(vec3.fromValues(1, 1, 0.88), 0.1)
     ]);
-    let bl = vec3.fromValues(-size, 0, -size)
-    let br = vec3.fromValues(size, 0, -size)
-    let tl = vec3.fromValues(-size, 0, size)
-    let tr = vec3.fromValues(size, 0, size)
-    let patch = new Patch(bl, br, tl, tr,
+
+    Flora.treeModel = require('./assets/tree.json');
+    Flora.rMatrix = mat4.create();
+    let angle = Math.PI*1.5;
+    Flora.rMatrix[5] = Math.cos(angle);
+    Flora.rMatrix[6] = Math.sin(angle);
+    Flora.rMatrix[9] = -1 * Math.sin(angle);
+    Flora.rMatrix[10] = Math.cos(angle);
+
+    let size = 5 * Math.pow(2, 10);
+    let patch = new Patch(
+        vec3.fromValues(-size, 0, -size),
+        vec3.fromValues(size, 0, -size),
+        vec3.fromValues(-size, 0, size),
+        vec3.fromValues(size, 0, size),
         new RNG(Math.random()),
         biomes
     );
-    let environment = new FractalNode(gl, biomes, patch, 0, 3, true).recurse();
-    environment.becomeNewRoot(Quadrant.Bl);
+    let policies = {
+        policyList: [
+            { from: undefined, to: 25, bufferAt: 12 },
+            { from: 25, to: 200, bufferAt: -100 },
+            { from: 200, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
+        ],
+        newNodeCutoff: 200
+    };
+    let environment = new FractalNode(gl, patch, 0, policies, true)
+    environment.expandAndPruneTree(vec3.fromValues(0, 0, 0));
+    // environment.becomeNewRoot(Quadrant.Bl);
     (window as any).env = environment; //TODO: remove, for debugging only
     let camera = new Camera(
         gl,
