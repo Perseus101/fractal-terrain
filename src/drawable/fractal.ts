@@ -411,7 +411,20 @@ export class FractalNode extends Fractal {
         let sqDist = xzSquaredDistance(patch.midpoint, playerPosition);
 
         for (let policy of this.policies.policyList) {
-            // console.log(policy, sqDist, circumscribedRadius, Math.pow(policy.from + circumscribedRadius, 2), Math.pow(policy.to + circumscribedRadius, 2));
+            // if (
+            //     (!policy.from || (
+            //         (patch.bl[0] - playerPosition[0] >= policy.from || patch.bl[0] - playerPosition[0] < 0) &&
+            //         (playerPosition[0] - patch.br[0] >= policy.from || playerPosition[0] - patch.br[0] < 0) &&
+            //         (patch.bl[2] - playerPosition[2] >= policy.from || patch.bl[2] - playerPosition[2] < 0) &&
+            //         (playerPosition[2] - patch.tl[2] >= policy.from || playerPosition[2] - patch.br[2] < 0)
+            //     )) &&
+            //     (!policy.to || (
+            //         (patch.bl[0] - playerPosition[0] <= policy.to || patch.bl[0] - playerPosition[0] < 0) &&
+            //         (playerPosition[0] - patch.br[0] <= policy.to || playerPosition[0] - patch.br[0] < 0) &&
+            //         (patch.bl[2] - playerPosition[2] <= policy.to || patch.bl[2] - playerPosition[2] < 0) &&
+            //         (playerPosition[2] - patch.tl[2] <= policy.to || playerPosition[2] - patch.br[2] < 0)
+            //     ))
+            // ) {
             if ((!policy.from || sqDist >= Math.pow(policy.from + circumscribedRadius, 2)) && (!policy.to || sqDist < Math.pow(policy.to + circumscribedRadius, 2))) {
                 return policy;
             }
