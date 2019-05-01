@@ -29,7 +29,7 @@ export class Camera {
         this.up = up;
         this.sun = vec3.clone(up);
         this.origin = vec3.fromValues(0,0,0);
-        vec3.rotateX(this.sun, this.sun, this.origin, Math.PI/-2);
+        vec3.rotateX(this.sun, this.sun, this.origin, Math.PI/-4);
         this.delta = delta;
         this.rotDelta = rotDelta;
         this.directions = {
@@ -45,7 +45,7 @@ export class Camera {
         this.nightColor = vec3.fromValues(0.0, 0.0, 0.1);
 
         this.flashLight = false;
-        this.gravity = false;
+        this.gravity = true;
 
         this.perspective = mat4.create();
         this.createPerspective(gl);
