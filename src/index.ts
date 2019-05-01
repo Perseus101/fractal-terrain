@@ -53,7 +53,7 @@ function main() {
             { from: 25, to: 200, bufferAt: -100 },
             { from: 200, to: undefined, bufferAt: undefined }, //undefined indicates it should despawn at this distance
         ],
-        newNodeCutoff: 200
+        newNodeCutoff: 250
     };
     let environment = new FractalNode(gl, patch, 0, policies, undefined)
     environment.expandAndPruneTree(vec3.fromValues(0, 0, 0));
