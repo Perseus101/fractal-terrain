@@ -601,7 +601,7 @@ export class BufferedFractal extends Fractal {
             let subPatches = patch.divide(n);
             let rand = patch.rng.seededRandom(patch.midpoint);
             // console.log(5/n);
-            if (!barren && rand > 0.999) {
+            if (!barren && rand > 0.999 && n >= 12) {
                 barren = true;
                 this.floraBuffer.transforms.push(Flora.getTransform(patch));
             }
